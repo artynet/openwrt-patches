@@ -1,0 +1,109 @@
+diff --git a/toolchain/gcc/common.mk b/toolchain/gcc/common.mk
+index dece29c..5109117 100644
+--- a/toolchain/gcc/common.mk
++++ b/toolchain/gcc/common.mk
+@@ -115,7 +115,8 @@ GCC_CONFIGURE:= \
+ 		--disable-multilib \
+ 		--disable-nls \
+ 		$(GRAPHITE_CONFIGURE) \
+-		--with-host-libstdcxx=-lstdc++ \
++		--with-host-libstdcxx="-static-libgcc -Wl,-Bstatic,-lstdc++,-Bdynamic -lm" \
++		--disable-threads \
+ 		$(SOFT_FLOAT_CONFIG_OPTION) \
+ 		$(call qstrip,$(CONFIG_EXTRA_GCC_CONFIG_OPTIONS)) \
+ 		$(if $(CONFIG_mips64)$(CONFIG_mips64el),--with-arch=mips64 \
+@@ -150,7 +151,7 @@ endif
+ 
+ ifeq ($(LIBC),uClibc)
+   GCC_CONFIGURE+= \
+-		--disable-__cxa_atexit
++		--enable-__cxa_atexit
+ else
+   GCC_CONFIGURE+= \
+ 		--enable-__cxa_atexit
+diff --git a/toolchain/gcc/final/Makefile b/toolchain/gcc/final/Makefile
+index 3fb5ccf..ef0cdb1 100644
+--- a/toolchain/gcc/final/Makefile
++++ b/toolchain/gcc/final/Makefile
+@@ -8,7 +8,8 @@ GCC_CONFIGURE += \
+ 	--enable-languages=$(TARGET_LANGUAGES) \
+ 	--enable-shared \
+ 	--enable-threads \
+-	--with-slibdir=$(TOOLCHAIN_DIR)/lib
++	--with-slibdir=$(TOOLCHAIN_DIR)/lib \
++	--with-host-libstdcxx="-static-libgcc -Wl,-Bstatic,-lstdc++,-Bdynamic -lm"
+ 
+ ifneq ($(CONFIG_GCC_VERSION_4_5)$(CONFIG_GCC_VERSION_4_6),)
+   GCC_CONFIGURE += \
+@@ -75,4 +76,3 @@ define Host/Install
+ endef
+ 
+ $(eval $(call HostBuild))
+-
+diff --git a/toolchain/gcc/minimal/Makefile b/toolchain/gcc/minimal/Makefile
+index 0344e1a..66a884c 100644
+--- a/toolchain/gcc/minimal/Makefile
++++ b/toolchain/gcc/minimal/Makefile
+@@ -9,7 +9,8 @@ GCC_CONFIGURE += \
+ 	--disable-libsanitizer \
+ 	--disable-libssp \
+ 	--disable-shared \
+-	--disable-threads
++	--disable-threads \
++	--with-host-libstdcxx="-static-libgcc -Wl,-Bstatic,-lstdc++,-Bdynamic -lm"
+ 
+ define Host/SetToolchainInfo
+ 	$(SED) 's,TARGET_CROSS=.*,TARGET_CROSS=$(REAL_GNU_TARGET_NAME)-,' $(TOOLCHAIN_DIR)/info.mk
+diff --git a/toolchain/gcc/patches/4.8-linaro/850-use_shared_libgcc.patch b/toolchain/gcc/patches/4.8-linaro/850-use_shared_libgcc.patch
+deleted file mode 100644
+index 6934bc9..0000000
+--- a/toolchain/gcc/patches/4.8-linaro/850-use_shared_libgcc.patch
++++ /dev/null
+@@ -1,47 +0,0 @@
+---- a/gcc/config/arm/linux-eabi.h
+-+++ b/gcc/config/arm/linux-eabi.h
+-@@ -131,10 +131,6 @@
+- #define ENDFILE_SPEC \
+-   LINUX_OR_ANDROID_LD (GNU_USER_TARGET_ENDFILE_SPEC, ANDROID_ENDFILE_SPEC)
+- 
+--/* Use the default LIBGCC_SPEC, not the version in linux-elf.h, as we
+--   do not use -lfloat.  */
+--#undef LIBGCC_SPEC
+--
+- /* Clear the instruction cache from `beg' to `end'.  This is
+-    implemented in lib1funcs.S, so ensure an error if this definition
+-    is used.  */
+---- a/gcc/config/linux.h
+-+++ b/gcc/config/linux.h
+-@@ -51,6 +51,10 @@ see the files COPYING3 and COPYING.RUNTI
+- 	builtin_assert ("system=posix");			\
+-     } while (0)
+- 
+-+#ifndef LIBGCC_SPEC
+-+#define LIBGCC_SPEC "%{static|static-libgcc:-lgcc}%{!static:%{!static-libgcc:-lgcc_s}}"
+-+#endif
+-+
+- /* Determine which dynamic linker to use depending on whether GLIBC or
+-    uClibc or Bionic is the default C library and whether
+-    -muclibc or -mglibc or -mbionic has been passed to change the default.  */
+---- a/libgcc/mkmap-symver.awk
+-+++ b/libgcc/mkmap-symver.awk
+-@@ -132,5 +132,5 @@ function output(lib) {
+-   else if (inherit[lib])
+-     printf("} %s;\n", inherit[lib]);
+-   else
+--    printf ("\n  local:\n\t*;\n};\n");
+-+    printf ("\n\t*;\n};\n");
+- }
+---- a/gcc/config/rs6000/linux.h
+-+++ b/gcc/config/rs6000/linux.h
+-@@ -61,6 +61,9 @@
+- #undef  CPLUSPLUS_CPP_SPEC
+- #define CPLUSPLUS_CPP_SPEC "-D_GNU_SOURCE %(cpp)"
+- 
+-+#undef LIBGCC_SPEC
+-+#define LIBGCC_SPEC "%{!static:%{!static-libgcc:-lgcc_s}} -lgcc"
+-+
+- #undef  LINK_SHLIB_SPEC
+- #define LINK_SHLIB_SPEC "%{shared:-shared} %{!shared: %{static:-static}}"
+- 

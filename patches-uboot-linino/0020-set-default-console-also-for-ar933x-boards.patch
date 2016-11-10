@@ -1,0 +1,25 @@
+From 416530788aa5b3f99496a4002f3be28c434519de Mon Sep 17 00:00:00 2001
+From: m13 <mimmo@linino.org>
+Date: Wed, 18 Mar 2015 18:37:12 +0100
+Subject: [PATCH 20/24] set default console also for ar933x boards
+
+---
+ include/configs/ap121.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/ap121.h b/include/configs/ap121.h
+index 5097202..86e3a52 100644
+--- a/include/configs/ap121.h
++++ b/include/configs/ap121.h
+@@ -110,7 +110,7 @@
+ #			define BOARD_DEFAULT	"board=linino\0"
+ #		endif
+ #		if CONFIG_LININO_IO
+-#			define CONSOLE_LININOIO_DEFAULT	"console=spicons\0"
++#			define CONSOLE_DEFAULT	"console=spicons\0"
+ #		else
+ #			define CONSOLE_DEFAULT	"console=ttyATH0,250000\0"
+ #		endif
+-- 
+2.10.1
+

@@ -1,0 +1,40 @@
+From 4f5d9980a267302d9984a269a8fe077bb39663f5 Mon Sep 17 00:00:00 2001
+From: m13 <mimmo@linino.org>
+Date: Wed, 8 Apr 2015 00:41:15 +0200
+Subject: [PATCH 21/24] Added Arduino Yun mini
+
+---
+ Makefile                | 3 +++
+ include/configs/ap121.h | 2 ++
+ 2 files changed, 5 insertions(+)
+
+diff --git a/Makefile b/Makefile
+index 2e5595b..c6edcb3 100644
+--- a/Makefile
++++ b/Makefile
+@@ -353,6 +353,9 @@ endif
+ linino-yun_config	:	linino_config
+ 	@echo '#define CONFIG_LININO_YUN 1' >>include/config.h
+ 
++linino-yun-mini_config	:	linino_config
++	@echo '#define CONFIG_LININO_YUN_MINI 1' >>include/config.h
++
+ linino-one_config	: 	linino_config
+ 	@echo '#define CONFIG_LININO_ONE 1' >>include/config.h
+ 
+diff --git a/include/configs/ap121.h b/include/configs/ap121.h
+index 86e3a52..ac9230a 100644
+--- a/include/configs/ap121.h
++++ b/include/configs/ap121.h
+@@ -100,6 +100,8 @@
+ #		define ERASE_ENV			"erase_env=erase 0x9f040000 +0x10000\0"
+ #		if CONFIG_LININO_YUN
+ #			define BOARD_DEFAULT	"board=linino-yun\0"
++#		elif CONFIG_LININO_YUN_MINI
++#			define BOARD_DEFAULT	"board=linino-yun-mini\0"
+ #		elif CONFIG_LININO_ONE
+ #			define BOARD_DEFAULT	"board=linino-one\0"
+ #		elif CONFIG_LININO_FREEDOG
+-- 
+2.10.1
+

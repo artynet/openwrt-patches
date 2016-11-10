@@ -1,0 +1,67 @@
+diff -bur lang/python/files/python-package.mk ../openwrt-15.05-x86/package/linino/python/files/python-package.mk
+--- lang/python/files/python-package.mk	2015-10-27 16:12:50.215488853 +0100
++++ ../openwrt-15.05-x86/package/linino/python/files/python-package.mk	2015-09-23 16:28:50.138311040 +0200
+@@ -6,7 +6,7 @@
+ #
+ 
+ PYTHON_VERSION:=2.7
+-PYTHON_VERSION_MICRO:=9
++PYTHON_VERSION_MICRO:=10
+ 
+ PYTHON_DIR:=$(STAGING_DIR)/usr
+ PYTHON_BIN_DIR:=$(PYTHON_DIR)/bin
+diff -bur lang/python/Makefile ../openwrt-15.05-x86/package/linino/python/Makefile
+--- lang/python/Makefile	2015-10-27 16:12:50.215488853 +0100
++++ ../openwrt-15.05-x86/package/linino/python/Makefile	2015-09-23 16:28:50.138311040 +0200
+@@ -12,11 +12,11 @@
+ 
+ PKG_NAME:=python
+ PKG_VERSION:=$(PYTHON_VERSION).$(PYTHON_VERSION_MICRO)
+-PKG_RELEASE:=5
++PKG_RELEASE:=6
+ 
+ PKG_SOURCE:=Python-$(PKG_VERSION).tar.xz
+ PKG_SOURCE_URL:=http://www.python.org/ftp/python/$(PKG_VERSION)
+-PKG_MD5SUM:=38d530f7efc373d64a8fb1637e3baaa7
++PKG_MD5SUM:=c685ef0b8e9f27b5e3db5db12b268ac6
+ 
+ PKG_LICENSE:=PSF
+ PKG_LICENSE_FILES:=LICENSE Modules/_ctypes/libffi_msvc/LICENSE Modules/_ctypes/darwin/LICENSE Modules/_ctypes/libffi/LICENSE Modules/_ctypes/libffi_osx/LICENSE Tools/pybench/LICENSE
+@@ -28,8 +28,7 @@
+ PKG_BUILD_DIR:=$(BUILD_DIR)/Python-$(PKG_VERSION)
+ HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/Python-$(PKG_VERSION)
+ 
+-PKG_BUILD_DEPENDS:=python/host
+-HOST_BUILD_DEPENDS:=bzip2/host
++PKG_BUILD_DEPENDS:=libbz2/host python/host
+ 
+ include $(INCLUDE_DIR)/host-build.mk
+ include $(INCLUDE_DIR)/package.mk
+@@ -222,6 +221,7 @@
+ 	--without-cxx-main \
+ 	--without-pymalloc \
+ 	--with-threads \
++	--with-system-expat=$(STAGING_DIR_HOST) \
+ 	--prefix=$(STAGING_DIR_HOST) \
+ 	--with-ensurepip=upgrade \
+ 	CONFIG_SITE= \
+diff -bur lang/python/patches/006-remove-debian-multiarch-support.patch ../openwrt-15.05-x86/package/linino/python/patches/006-remove-debian-multiarch-support.patch
+--- lang/python/patches/006-remove-debian-multiarch-support.patch	2015-10-27 16:12:50.215488853 +0100
++++ ../openwrt-15.05-x86/package/linino/python/patches/006-remove-debian-multiarch-support.patch	2015-09-23 16:28:50.138311040 +0200
+@@ -1,12 +1,14 @@
+ diff --git a/setup.py b/setup.py
+-index 7868b7b..9ae0ef2 100644
++index 1d1ae72..511aed5 100644
+ --- a/setup.py
+ +++ b/setup.py
+-@@ -444,7 +444,6 @@ class PyBuildExt(build_ext):
++@@ -444,7 +444,8 @@ class PyBuildExt(build_ext):
+              add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')
+          if cross_compiling:
+              self.add_gcc_paths()
+ -        self.add_multiarch_paths()
+++        else:
+++            self.add_multiarch_paths()
+  
+          # Add paths specified in the environment variables LDFLAGS and
+          # CPPFLAGS for header and library files.

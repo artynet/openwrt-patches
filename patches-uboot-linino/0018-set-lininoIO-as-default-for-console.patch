@@ -1,0 +1,70 @@
+From 746cd6ed043f318d34bc7dbaad5b29496d31d97b Mon Sep 17 00:00:00 2001
+From: m13 <mimmo@linino.org>
+Date: Wed, 18 Mar 2015 17:23:21 +0100
+Subject: [PATCH 18/24] set lininoIO as default for console
+
+---
+ Makefile                | 8 ++++++--
+ config.linino           | 4 +---
+ include/configs/ap123.h | 4 ++--
+ 3 files changed, 9 insertions(+), 7 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 3167718..2e5595b 100644
+--- a/Makefile
++++ b/Makefile
+@@ -345,7 +345,9 @@ linino_config		    : 	unconfig    hornet_common_config
+ 	@echo "#define CONFIG_HORNET_1_1_WAR 1" >>include/config.h
+ 	@echo "#define NEW_DDR_TAP_CAL 1" >>include/config.h
+ 	@echo "#define CONFIG_LININO_DDR2 1" >>include/config.h
+-
++ifeq ($(CONFIG_LININO_IO), 1)
++	@echo "#define CONFIG_LININO_IO 1" >>include/config.h
++endif
+ 	@./mkconfig -a ap121 mips mips ap121 ar7240 ar7240 linino
+ 	
+ linino-yun_config	:	linino_config
+@@ -369,7 +371,9 @@ linino-chowchow_config		    : 	unconfig
+ 	@echo '#define CFG_AG7240_NMACS 1' >>include/config.h
+ 	@echo "#define FLASH_SIZE $(FLASH_SIZE)" >>include/config.h
+ 	@echo '#define CONFIG_F1E_PHY 1' >>include/config.h
+-
++ifeq ($(CONFIG_LININO_IO), 1)
++	@echo "#define CONFIG_LININO_IO 1" >>include/config.h
++endif
+ 	@./mkconfig -a ap123 mips mips ap123 ar7240 ar7240 linino
+ 	
+ #########################################################################
+diff --git a/config.linino b/config.linino
+index dae935d..0c00cb3 100644
+--- a/config.linino
++++ b/config.linino
+@@ -2,8 +2,6 @@
+ # Copyright (C) 2013 DogHunter
+ 
+ export COMPRESSED_UBOOT=0
+-#export CONFIG_HORNET_1_1_WAR=1
+-#export NEW_DDR_TAP_CAL=1
+ export FLASH_SIZE=16
+ export CONFIG_HORNET_XTAL=25
+-#export CONFIG_LININO_DDR2=1
++export CONFIG_LININO_IO=1
+diff --git a/include/configs/ap123.h b/include/configs/ap123.h
+index 3e84cb0..1b17ead 100644
+--- a/include/configs/ap123.h
++++ b/include/configs/ap123.h
+@@ -153,9 +153,9 @@
+ #		define BOARD_DEFAULT		"board=linino-chowchow\0"
+ #		define ERASE_ENV			"erase_env=erase 0x9f040000 +0x10000\0"
+ #		if CONFIG_LININO_IO
+-#			define CONSOLE_LININOIO_DEFAULT	"console=spicons\0"
++#			define CONSOLE_DEFAULT	"console=spicons\0"
+ #		else
+-#			define CONSOLE_DEFAULT		"console=ttyATH0,460800\0"
++#			define CONSOLE_DEFAULT	"console=ttyATH0,460800\0"
+ #		endif
+ #		undef CONFIG_BAUDRATE
+ #		define CONFIG_BAUDRATE	250000
+-- 
+2.10.1
+

@@ -1,0 +1,40 @@
+From 6f128b9f7689bf7d40d7e4752bb0f4e3833141fb Mon Sep 17 00:00:00 2001
+From: m13 <mimmo@linino.org>
+Date: Wed, 18 Mar 2015 18:36:43 +0100
+Subject: [PATCH 19/24] ar934x_serial: cleaning of the code
+
+---
+ cpu/mips/ar7240/ar934x_serial.c | 16 +++++-----------
+ 1 file changed, 5 insertions(+), 11 deletions(-)
+
+diff --git a/cpu/mips/ar7240/ar934x_serial.c b/cpu/mips/ar7240/ar934x_serial.c
+index 3dc182f..3703740 100644
+--- a/cpu/mips/ar7240/ar934x_serial.c
++++ b/cpu/mips/ar7240/ar934x_serial.c
+@@ -206,18 +206,12 @@ int serial_init(void)
+     serial_setbrg();
+ 
+ #else
+-#ifndef CONFIG_HORNET_EMU
+-
+-    rdata = ar7240_reg_rd(HORNET_BOOTSTRAP_STATUS);
+-    rdata &= HORNET_BOOTSTRAP_SEL_25M_40M_MASK;
++    val = ar7240_reg_rd(WASP_BOOTSTRAP_REG);
+ 
+-    if (rdata)
+-        baudRateDivisor = ( 40000000 / (16*baud) ) - 1; // 40 MHz clock is taken as UART clock        
+-    else
+-        baudRateDivisor = ( 25000000 / (16*baud) ) - 1; // 25 MHz clock is taken as UART clock	        
+-#else
+-    baudRateDivisor = ( ahb_freq / (16*baud) ) - 1; // 40 MHz clock is taken as UART clock 
+-#endif
++    if ((val & WASP_REF_CLK_25) == 0) {
++		baudRateDivisor = ( 25000000 / (16*baud) ) - 1; // 25 MHz clock is taken as UART clock	        
++	else
++		baudRateDivisor = ( 40000000 / (16*baud) ) - 1; // 40 MHz clock is taken as UART clock    
+  
+     clock_step = 8192;
+ 
+-- 
+2.10.1
+

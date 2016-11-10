@@ -1,0 +1,31 @@
+From 878c831b3b89d16e15efebc87277dbb327e06992 Mon Sep 17 00:00:00 2001
+From: m13 <mimmo@linino.org>
+Date: Fri, 23 May 2014 01:36:57 +0200
+Subject: [PATCH 04/24] uboot: add string for autoboot
+
+---
+ include/configs/ap123.h | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/include/configs/ap123.h b/include/configs/ap123.h
+index 49d187f..fa57f2e 100644
+--- a/include/configs/ap123.h
++++ b/include/configs/ap123.h
+@@ -469,6 +469,14 @@
+ /* For Merlin, both PCI, PCI-E interfaces are valid */
+ #define AR7240_ART_PCICFG_OFFSET        12
+ 
++#define CONFIG_BOOT_RETRY_TIME		-1
++#define CONFIG_AUTOBOOT_KEYED
++#define CONFIG_AUTOBOOT_PROMPT		"autoboot in %d seconds (stop with 'lin')...\n"
++#define CONFIG_AUTOBOOT_STOP_STR	"lin"
++#define CONFIG_ZERO_BOOTDELAY_CHECK
++#define CONFIG_RESET_TO_RETRY		1
++#define CONFIG_BOOT_RETRY_MIN		1
++
+ #include <cmd_confdefs.h>
+ 
+ #endif	/* __CONFIG_H */
+-- 
+2.10.1
+

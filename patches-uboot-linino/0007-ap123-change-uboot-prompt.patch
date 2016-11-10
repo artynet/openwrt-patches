@@ -1,0 +1,25 @@
+From 03f0ea11bb437ca123dafdf1b72af7d792c8320f Mon Sep 17 00:00:00 2001
+From: m13 <mimmo@linino.org>
+Date: Thu, 30 Oct 2014 12:13:33 +0100
+Subject: [PATCH 07/24] ap123: change uboot prompt
+
+---
+ include/configs/ap123.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/configs/ap123.h b/include/configs/ap123.h
+index fa57f2e..4cce008 100644
+--- a/include/configs/ap123.h
++++ b/include/configs/ap123.h
+@@ -454,6 +454,8 @@
+ #define CFG_BOOTM_LEN			(16 << 20) /* 16 MB */
+ #define CFG_HUSH_PARSER
+ #define CFG_PROMPT_HUSH_PS2		"hush>"
++#undef CFG_PROMPT
++#define CFG_PROMPT 	"linino> "
+ 
+ /*
+ ** Parameters defining the location of the calibration/initialization
+-- 
+2.10.1
+

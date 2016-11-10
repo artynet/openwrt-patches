@@ -1,0 +1,62 @@
+--- swig-3.0.7-original/Makefile	2016-10-03 10:53:12.956283453 +0200
++++ swig-3.0.7-ipk/Makefile	2016-10-03 10:42:44.434706360 +0200
+@@ -8,6 +8,7 @@
+ 
+ PKG_NAME:=swig
+ PKG_VERSION:=3.0.7
++PKG_RELEASE:=2
+ 
+ PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+ PKG_SOURCE_URL:=@SF/$(PKG_NAME)
+@@ -16,7 +17,9 @@
+ 
+ PKG_MAINTAINER:=John Crispin <blogic@openwrt.org>
+ PKG_LICENSE:=GPL-3.0
+-PKG_LICENSE_FILE:=LICENSE
++PKG_LICENSE_FILES:=LICENSE
++
++PKG_BUILD_DEPENDS:=+swig/host
+ 
+ include $(INCLUDE_DIR)/host-build.mk
+ include $(INCLUDE_DIR)/package.mk
+@@ -25,20 +28,37 @@
+   SECTION:=libs
+   CATEGORY:=Libraries
+   TITLE:=swig binding generator
+-  DEPENDS:=+libc +libstdcpp
+-  BUILDONLY:=1
++  DEPENDS:=+libc +tcl +libpcre +libc +libstdcpp
+ endef
+ 
+ HOST_CONFIGURE_ARGS+= \
+ 	--without-pcre
+ 
++CONFIGURE_ARGS += \
++	--with-tclconfig=$(STAGING_DIR)/usr/lib
++
+ define Package/swig/description
+   tool that generates bindings for various languages
+ endef
+ 
++define Host/Configure
++	$(call Host/Configure/Default)
++endef
++
++define Host/Compile
++	$(call Host/Compile/Default)
++endef
++
++define Host/Install
++	$(call Host/Install/Default)
++endef
++
+ define Package/swig/install
+ 	$(INSTALL_DIR) $(1)/usr/bin
+-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/swig $(1)/usr/bin
++	$(INSTALL_DIR) $(1)/usr/share
++
++	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/* $(1)/usr/bin
++	$(CP) -R $(PKG_INSTALL_DIR)/usr/share/swig $(1)/usr/share
+ endef
+ 
+ $(eval $(call HostBuild))

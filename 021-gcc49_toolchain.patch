@@ -1,0 +1,73 @@
+From f97afc5934619a6c7154bf7b88a48266da383952 Mon Sep 17 00:00:00 2001
+From: Arturo Rinaldi <arty.net2@gmail.com>
+Date: Thu, 18 Feb 2016 17:18:06 +0100
+Subject: [PATCH] adding support for Linaro gcc-4.9.1 when building the
+ toolchain
+
+---
+ toolchain/gcc/Config.in      | 3 +++
+ toolchain/gcc/Config.version | 8 ++++++++
+ toolchain/gcc/common.mk      | 8 ++++++++
+ 3 files changed, 19 insertions(+)
+
+diff --git a/toolchain/gcc/Config.in b/toolchain/gcc/Config.in
+index 0c55048..3c8e2fa 100644
+--- a/toolchain/gcc/Config.in
++++ b/toolchain/gcc/Config.in
+@@ -15,6 +15,9 @@ choice
+ 		select GCC_VERSION_4_8_LINARO
+ 		bool "gcc 4.8.x with Linaro enhancements"
+ 
++	config GCC_USE_VERSION_4_9_LINARO
++		select GCC_VERSION_4_9_LINARO
++		bool "gcc 4.9.x with Linaro enhancements"
+ endchoice
+ 
+ config GCC_USE_GRAPHITE
+diff --git a/toolchain/gcc/Config.version b/toolchain/gcc/Config.version
+index dc6b93b..06302e2 100644
+--- a/toolchain/gcc/Config.version
++++ b/toolchain/gcc/Config.version
+@@ -6,11 +6,16 @@ config GCC_VERSION_4_8_LINARO
+ 	default y if (!TOOLCHAINOPTS && !TARGET_octeon)
+ 	bool
+ 
++config GCC_VERSION_4_9_LINARO
++	default y if (!TOOLCHAINOPTS && !TARGET_octeon)
++	bool
++
+ config GCC_VERSION
+ 	string
+ 	default "4.6.3"	    if GCC_VERSION_4_6_3
+ 	default "4.6-linaro"    if GCC_VERSION_4_6_LINARO
+ 	default "4.8-linaro"    if GCC_VERSION_4_8_LINARO
++	default "4.9-linaro"    if GCC_VERSION_4_9_LINARO
+ 	default "4.6-linaro"
+ 
+ config GCC_VERSION_4_6
+@@ -21,3 +26,6 @@ config GCC_VERSION_4_8
+ 	bool
+ 	default y	if GCC_VERSION_4_8_LINARO
+ 
++config GCC_VERSION_4_9
++	bool
++	default y	if GCC_VERSION_4_9_LINARO
+diff --git a/toolchain/gcc/common.mk b/toolchain/gcc/common.mk
+index dece29c..469e86e 100644
+--- a/toolchain/gcc/common.mk
++++ b/toolchain/gcc/common.mk
+@@ -41,6 +41,14 @@ ifeq ($(findstring linaro, $(CONFIG_GCC_VERSION)),linaro)
+       PKG_MD5SUM:=5ba2f3a449b1658ccc09d27cc7ab3c03
+       PKG_COMP:=xz
+     endif
++    ifeq ($(CONFIG_GCC_VERSION),"4.9-linaro")
++      PKG_REV:=4.9-2014.06-1
++      PKG_VERSION:=4.9.1
++      PKG_VERSION_MAJOR:=4.9
++      LINARO_RELEASE:=14.06
++      PKG_MD5SUM:=d2a0e0a7ed23edba0c506899d2e26e29
++      PKG_COMP:=xz
++    endif
+     ifneq ($(LINARO_RELEASE),)
+       PKG_SOURCE_URL:=http://releases.linaro.org/$(LINARO_RELEASE)/components/toolchain/gcc-linaro/$(PKG_VERSION_MAJOR)
+     else

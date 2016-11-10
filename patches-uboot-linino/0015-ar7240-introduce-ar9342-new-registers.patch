@@ -1,0 +1,59 @@
+From e583c2025bcfca0898ccaac70296e906018cf1c3 Mon Sep 17 00:00:00 2001
+From: m13 <mimmo@linino.org>
+Date: Wed, 18 Mar 2015 17:04:27 +0100
+Subject: [PATCH 15/24] ar7240: introduce ar9342 new registers
+
+---
+ include/ar7240_soc.h | 21 ++++++++++++++++++++-
+ 1 file changed, 20 insertions(+), 1 deletion(-)
+
+diff --git a/include/ar7240_soc.h b/include/ar7240_soc.h
+index f4a2386..41f0844 100644
+--- a/include/ar7240_soc.h
++++ b/include/ar7240_soc.h
+@@ -47,7 +47,6 @@
+ #define AR7240_SPI_BASE                 0x1f000000
+ #define ATH_NAND_FLASH_BASE		0x1b000000u
+ 
+-
+ /*
+  * APB block
+  */
+@@ -60,6 +59,11 @@
+ #define AR7240_RESET_BASE               AR7240_APB_BASE+0x00060000
+ #define AR7240_PCI_LCL_BASE             AR7240_APB_BASE+0x000f0000
+ 
++#ifdef CONFIG_WASP_SUPPORT
++#define AR934X_UART1_BASE		AR7240_APB_BASE+0x00500000
++#endif
++
++
+ /*
+  * DDR block
+  */
+@@ -433,7 +437,22 @@
+ #define AR7240_GPIO_INT_POLARITY        AR7240_GPIO_BASE+0x1c
+ #define AR7240_GPIO_INT_PENDING         AR7240_GPIO_BASE+0x20
+ #define AR7240_GPIO_INT_MASK            AR7240_GPIO_BASE+0x24
++#ifdef CONFIG_WASP_SUPPORT
++#define AR7240_GPIO_FUNC0               AR7240_GPIO_BASE+0x2C
++#define AR7240_GPIO_FUNC1               AR7240_GPIO_BASE+0x30
++#define AR7240_GPIO_FUNC2               AR7240_GPIO_BASE+0x34
++#define AR7240_GPIO_FUNC3               AR7240_GPIO_BASE+0x38
++#define AR7240_GPIO_FUNC4               AR7240_GPIO_BASE+0x3C
++#define AR7240_GPIO_IN_ENABLE0          AR7240_GPIO_BASE+0x44
++#define AR7240_GPIO_IN_ENABLE1          AR7240_GPIO_BASE+0x48
++#define AR7240_GPIO_IN_ENABLE2          AR7240_GPIO_BASE+0x4c
++#define AR7240_GPIO_IN_ENABLE3          AR7240_GPIO_BASE+0x50
++#define AR7240_GPIO_IN_ENABLE4          AR7240_GPIO_BASE+0x54
++#define AR7240_GPIO_IN_ENABLE9          AR7240_GPIO_BASE+0x68
++#define AR7240_GPIO_FUNCTION            AR7240_GPIO_BASE+0x6C
++#else
+ #define AR7240_GPIO_FUNC                AR7240_GPIO_BASE+0x28
++#endif
+ 
+ /*
+  * IRQ Map.
+-- 
+2.10.1
+

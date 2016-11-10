@@ -1,0 +1,40 @@
+From 48e71573cff14b37c75c48e151fa18c4a049ad9a Mon Sep 17 00:00:00 2001
+From: Mimmo <mimmo@linino.org>
+Date: Thu, 5 Mar 2015 10:50:34 +0100
+Subject: [PATCH 12/24] Add uboot for chiwawa board
+
+---
+ Makefile                | 3 +++
+ include/configs/ap121.h | 2 ++
+ 2 files changed, 5 insertions(+)
+
+diff --git a/Makefile b/Makefile
+index 0ed311d..659d559 100644
+--- a/Makefile
++++ b/Makefile
+@@ -357,6 +357,9 @@ linino-one_config	: 	linino_config
+ linino-freedog_config	: 	linino_config
+ 	@echo '#define CONFIG_LININO_FREEDOG 1' >>include/config.h
+ 
++linino-chiwawa_config   :       linino_config
++	@echo '#define CONFIG_LININO_CHIWAWA 1' >>include/config.h
++
+ linino-chowchow_config		    : 	unconfig
+ 	@echo '#define CONFIG_LININO 1' >>include/config.h
+ 	@echo '#define CONFIG_AP123 1' >>include/config.h
+diff --git a/include/configs/ap121.h b/include/configs/ap121.h
+index a3c7a56..5097202 100644
+--- a/include/configs/ap121.h
++++ b/include/configs/ap121.h
+@@ -104,6 +104,8 @@
+ #			define BOARD_DEFAULT	"board=linino-one\0"
+ #		elif CONFIG_LININO_FREEDOG
+ #			define BOARD_DEFAULT	"board=linino-freedog\0"
++#               elif CONFIG_LININO_CHIWAWA
++#                       define BOARD_DEFAULT    "board=linino-chiwawa\0"
+ #		else 
+ #			define BOARD_DEFAULT	"board=linino\0"
+ #		endif
+-- 
+2.10.1
+

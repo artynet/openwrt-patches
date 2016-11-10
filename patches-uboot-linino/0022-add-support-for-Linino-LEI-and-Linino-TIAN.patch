@@ -1,0 +1,91 @@
+From 38b01aaf6db07997e7e18e3133f6e0a654ade922 Mon Sep 17 00:00:00 2001
+From: Mimmo <mimmo@linino.org>
+Date: Mon, 8 Jun 2015 04:20:53 -0700
+Subject: [PATCH 22/24] add support for Linino LEI and Linino TIAN
+
+---
+ Makefile                | 11 ++++++++++-
+ include/configs/ap123.h | 26 ++++++++++++++++++++------
+ 2 files changed, 30 insertions(+), 7 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index c6edcb3..5692c73 100644
+--- a/Makefile
++++ b/Makefile
+@@ -365,7 +365,7 @@ linino-freedog_config	: 	linino_config
+ linino-chiwawa_config   :       linino_config
+ 	@echo '#define CONFIG_LININO_CHIWAWA 1' >>include/config.h
+ 
+-linino-chowchow_config		    : 	unconfig
++linino-wasp_config		    : 	unconfig
+ 	@echo '#define CONFIG_LININO 1' >>include/config.h
+ 	@echo '#define CONFIG_AP123 1' >>include/config.h
+ 	@echo '#define CONFIG_ROOTFS_TYPE "rootfstype=squashfs"' >>include/config.h
+@@ -378,6 +378,15 @@ ifeq ($(CONFIG_LININO_IO), 1)
+ 	@echo "#define CONFIG_LININO_IO 1" >>include/config.h
+ endif
+ 	@./mkconfig -a ap123 mips mips ap123 ar7240 ar7240 linino
++
++linino-lei_config		    : 	unconfig linino-wasp_config		
++	@echo '#define CONFIG_LININO_LEI 1' >>include/config.h
++
++linino-tian_config		    : 	unconfig linino-wasp_config
++	@echo '#define CONFIG_LININO_TIAN 1' >>include/config.h
++	@echo '#define CONFIG_BAUDRATE 115200' >>include/config.h
++
++
+ 	
+ #########################################################################
+ #########################################################################
+diff --git a/include/configs/ap123.h b/include/configs/ap123.h
+index 1b17ead..b24e619 100644
+--- a/include/configs/ap123.h
++++ b/include/configs/ap123.h
+@@ -90,8 +90,10 @@
+ #define BC "bc=mi124_f1e\0"
+ #endif
+ #if CONFIG_AP123
+-#	if CONFIG_LININO
+-#		define BC "bc=linino-chowchow\0"
++#	if CONFIG_LININO_LEI
++#		define BC "bc=linino-lei\0"
++#	elif CONFIG_LININO_TIAN
++#		define BC "bc=linino-tian\0"
+ #	else
+ #		define BC "bc=ap123\0"
+ #	endif
+@@ -150,15 +152,27 @@
+ #		define ROOTFSENV_DEFAULT	"addrootfs=setenv bootargs ${bootargs} rootfstype=squashfs,jffs2 noinitrd\0"
+ #		define BOARDENV_DEFAULT		"addboard=setenv bootargs board=${board}\0"
+ #		define TTYENV_DEFAULT		"addtty=setenv bootargs ${bootargs} console=${console}\0"
+-#		define BOARD_DEFAULT		"board=linino-chowchow\0"
++#		ifndef CONFIG_BAUDRATE
++#			define CONFIG_BAUDRATE	250000
++#		endif
++#		if CONFIG_LININO_LEI
++#			define BOARD_DEFAULT		"board=linino-lei\0"
++#		elif CONFIG_LININO_TIAN
++#			define BOARD_DEFAULT		"board=linino-tian\0"
++#		else
++#			define BOARD_DEFAULT		"board=linino\0"
++#		endif
+ #		define ERASE_ENV			"erase_env=erase 0x9f040000 +0x10000\0"
+ #		if CONFIG_LININO_IO
+-#			define CONSOLE_DEFAULT	"console=spicons\0"
++#			if CONFIG_LININO_TIAN
++#				define CONSOLE_DEFAULT	"console=ttyATH0,115200\0"
++#			else
++#				define CONSOLE_DEFAULT	"console=spicons\0"
++#			endif
+ #		else
+ #			define CONSOLE_DEFAULT	"console=ttyATH0,460800\0"
+ #		endif
+-#		undef CONFIG_BAUDRATE
+-#		define CONFIG_BAUDRATE	250000
++
+ #	else
+ #		define ATH_U_FILE	u-boot.bin
+ #		define ATH_F_FILE	${bc}-jffs2
+-- 
+2.10.1
+

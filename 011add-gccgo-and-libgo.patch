@@ -1,0 +1,239 @@
+From ac3ad0dc738ed94bed82723b486566b23ea491d1 Mon Sep 17 00:00:00 2001
+From: Geert-Johan Riemer <geertjohan.riemer@gmail.com>
+Date: Mon, 6 Jan 2014 09:57:45 +0100
+Subject: [PATCH 1/6] Add makefile and configuration directives to build gccgo
+ and libgo, and include the latter in target image.
+
+---
+ package/libs/toolchain/Makefile | 42 +++++++++++++++++++++++++++++++++++++++++
+ toolchain/gcc/Config.in         |  7 +++++++
+ toolchain/gcc/common.mk         |  2 +-
+ 3 files changed, 50 insertions(+), 1 deletion(-)
+
+diff --git a/package/libs/toolchain/Makefile b/package/libs/toolchain/Makefile
+index 202e9d0..a2a1763 100644
+--- a/package/libs/toolchain/Makefile
++++ b/package/libs/toolchain/Makefile
+@@ -228,6 +228,34 @@ define Package/libgfortran/config
+ 	endmenu
+ endef
+ 
++
++define Package/libgo
++$(call Package/gcc/Default)
++  TITLE:=Go support library
++  DEPENDS+=@INSTALL_GCCGO
++endef
++
++define Package/libgo/config
++       menu "Configuration"
++               depends EXTERNAL_TOOLCHAIN && PACKAGE_libgo
++
++       config LIBGO_ROOT_DIR
++               string
++               prompt "libgo shared library base directory"
++               depends EXTERNAL_TOOLCHAIN && PACKAGE_libgo
++               default TOOLCHAIN_ROOT  if !NATIVE_TOOLCHAIN
++               default "/"  if NATIVE_TOOLCHAIN
++
++       config LIBGO_FILE_SPEC
++               string
++               prompt "libgo shared library files (use wildcards)"
++               depends EXTERNAL_TOOLCHAIN && PACKAGE_libgo
++               default "./usr/lib/libgo.so.*"
++
++       endmenu
++endef
++
++
+ define Package/ldd
+ $(call Package/libc/Default)
+   DEPENDS:=@!USE_MUSL
+@@ -372,11 +400,24 @@ ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
+ 	$(if $(CONFIG_TARGET_avr32)$(CONFIG_TARGET_coldfire),,$(CP) $(TOOLCHAIN_DIR)/lib/libgfortran.so.* $(1)/usr/lib/)
+   endef
+ 
++  define Package/libgo/install
++    $(INSTALL_DIR) $(1)/usr/lib
++    $(if $(CONFIG_TARGET_avr32)$(CONFIG_TARGET_coldfire),,$(CP) $(TOOLCHAIN_DIR)/lib/libgo.so.* $(1)/usr/lib/)
++  endef
++
+   define Package/libssp/install
+ 	$(INSTALL_DIR) $(1)/lib
+ 	$(CP) $(TOOLCHAIN_DIR)/lib/libssp.so.* $(1)/lib/
+   endef
+ 
++  define Package/libgo/install
++    for file in $(call qstrip,$(CONFIG_LIBGO_FILE_SPEC)); do \
++        dir=`dirname $$$$file` ; \
++        $(INSTALL_DIR) $(1)/$$$$dir ; \
++        $(CP) $(call qstrip,$(CONFIG_LIBGO_ROOT_DIR))/$$$$file $(1)/$$$$dir/ ; \
++    done
++  endef
++
+   define Package/libstdcpp/install
+ 	$(INSTALL_DIR) $(1)/usr/lib
+ 	$(CP) $(TOOLCHAIN_DIR)/lib/libstdc++.so.* $(1)/usr/lib/
+@@ -591,5 +632,6 @@ $(eval $(call BuildPackage,libpthread))
+ $(eval $(call BuildPackage,libthread-db))
+ $(eval $(call BuildPackage,librt))
+ $(eval $(call BuildPackage,libgfortran))
++$(eval $(call BuildPackage,libgo))
+ $(eval $(call BuildPackage,ldd))
+ $(eval $(call BuildPackage,ldconfig))
+diff --git a/toolchain/gcc/Config.in b/toolchain/gcc/Config.in
+index 737164a..2c3dc98 100644
+--- a/toolchain/gcc/Config.in
++++ b/toolchain/gcc/Config.in
+@@ -73,3 +73,10 @@ config INSTALL_GFORTRAN
+ 	default n
+ 	help
+ 	    Build/install GNU fortran compiler ?
++
++config INSTALL_GCCGO
++               bool
++               prompt "Build/install gccgo compiler?" if TOOLCHAINOPTS
++               default n
++               help
++                       Build/install GNU gccgo compiler ?
+\ No newline at end of file
+diff --git a/toolchain/gcc/common.mk b/toolchain/gcc/common.mk
+index ebfcfc1..c7b04c6 100644
+--- a/toolchain/gcc/common.mk
++++ b/toolchain/gcc/common.mk
+@@ -86,7 +86,7 @@ HOST_STAMP_CONFIGURED:=$(GCC_BUILD_DIR)/.configured
+ HOST_STAMP_INSTALLED:=$(STAGING_DIR_HOST)/stamp/.gcc_$(GCC_VARIANT)_installed
+ 
+ SEP:=,
+-TARGET_LANGUAGES:="c,c++$(if $(CONFIG_INSTALL_LIBGCJ),$(SEP)java)$(if $(CONFIG_INSTALL_GFORTRAN),$(SEP)fortran)"
++TARGET_LANGUAGES:="c,c++$(if $(CONFIG_INSTALL_LIBGCJ),$(SEP)java)$(if $(CONFIG_INSTALL_GFORTRAN),$(SEP)fortran)$(if $(CONFIG_INSTALL_GCCGO),$(SEP)go)"
+ 
+ export libgcc_cv_fixed_point=no
+ ifdef CONFIG_USE_UCLIBC
+
+From a94a031ed750dc47d4a4fea9cc058d4536bcc67b Mon Sep 17 00:00:00 2001
+From: Geert-Johan Riemer <geertjohan.riemer@gmail.com>
+Date: Tue, 7 Jan 2014 13:37:58 +0100
+Subject: [PATCH 2/6] Fixed indentation for gccgo config option
+
+---
+ toolchain/gcc/Config.in | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/toolchain/gcc/Config.in b/toolchain/gcc/Config.in
+index 2c3dc98..5915706 100644
+--- a/toolchain/gcc/Config.in
++++ b/toolchain/gcc/Config.in
+@@ -75,8 +75,8 @@ config INSTALL_GFORTRAN
+ 	    Build/install GNU fortran compiler ?
+ 
+ config INSTALL_GCCGO
+-               bool
+-               prompt "Build/install gccgo compiler?" if TOOLCHAINOPTS
+-               default n
+-               help
+-                       Build/install GNU gccgo compiler ?
+\ No newline at end of file
++	bool
++	prompt "Build/install gccgo compiler?" if TOOLCHAINOPTS
++	default n
++	help
++	    Build/install GNU gccgo compiler ?
+\ No newline at end of file
+
+From baa9e2a41ace216ef42bb53c547e888bf6296fa2 Mon Sep 17 00:00:00 2001
+From: Geert-Johan Riemer <geertjohan.riemer@gmail.com>
+Date: Tue, 7 Jan 2014 13:43:45 +0100
+Subject: [PATCH 3/6] Change option libgo, have eglibc as dependency
+
+---
+ package/libs/toolchain/Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/package/libs/toolchain/Makefile b/package/libs/toolchain/Makefile
+index a2a1763..74a4e2c 100644
+--- a/package/libs/toolchain/Makefile
++++ b/package/libs/toolchain/Makefile
+@@ -233,6 +233,7 @@ define Package/libgo
+ $(call Package/gcc/Default)
+   TITLE:=Go support library
+   DEPENDS+=@INSTALL_GCCGO
++  DEPENDS+=@USE_EGLIBC
+ endef
+ 
+ define Package/libgo/config
+
+From d7d1e7eaa4efc1f1d6698077c0eed429e902b964 Mon Sep 17 00:00:00 2001
+From: Geert-Johan Riemer <geertjohan.riemer@gmail.com>
+Date: Tue, 7 Jan 2014 13:44:20 +0100
+Subject: [PATCH 4/6] Change option install gccgo: have gcc version 4.8 or
+ 4.8_linaro as dependency
+
+---
+ toolchain/gcc/Config.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/toolchain/gcc/Config.in b/toolchain/gcc/Config.in
+index 5915706..0568e70 100644
+--- a/toolchain/gcc/Config.in
++++ b/toolchain/gcc/Config.in
+@@ -76,7 +76,7 @@ config INSTALL_GFORTRAN
+ 
+ config INSTALL_GCCGO
+ 	bool
+-	prompt "Build/install gccgo compiler?" if TOOLCHAINOPTS
++	prompt "Build/install gccgo compiler?" if TOOLCHAINOPTS && (GCC_VERSION_4_8_0 || GCC_VERSION_4_8_LINARO)
+ 	default n
+ 	help
+ 	    Build/install GNU gccgo compiler ?
+\ No newline at end of file
+
+From a95adca2c5a6f820d1e2edb6fa04bf8c2f25c811 Mon Sep 17 00:00:00 2001
+From: Geert-Johan Riemer <geertjohan.riemer@gmail.com>
+Date: Tue, 7 Jan 2014 15:16:03 +0100
+Subject: [PATCH 5/6] Change gccgo depdency to 'not gcc 4.6.x' Depending on
+ !(GCC_VERSION_4_6 || GCC_VERSION_4_6_LINARO) is more future-safe, as this
+ removes the need to add future versions to the 'whitelist'. It is unlikely
+ that an older version is added to OpenWRT.
+
+---
+ toolchain/gcc/Config.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/toolchain/gcc/Config.in b/toolchain/gcc/Config.in
+index 0568e70..bf63018 100644
+--- a/toolchain/gcc/Config.in
++++ b/toolchain/gcc/Config.in
+@@ -76,7 +76,7 @@ config INSTALL_GFORTRAN
+ 
+ config INSTALL_GCCGO
+ 	bool
+-	prompt "Build/install gccgo compiler?" if TOOLCHAINOPTS && (GCC_VERSION_4_8_0 || GCC_VERSION_4_8_LINARO)
++	prompt "Build/install gccgo compiler?" if TOOLCHAINOPTS && !(GCC_VERSION_4_6 || GCC_VERSION_4_6_LINARO)
+ 	default n
+ 	help
+ 	    Build/install GNU gccgo compiler ?
+\ No newline at end of file
+
+From 9361471f5b6042f6418af0985af52424b20fec03 Mon Sep 17 00:00:00 2001
+From: iav <iav@iav.lv>
+Date: Sun, 13 Mar 2016 19:50:24 +0200
+Subject: [PATCH 6/6] Correct wrong check sum for #6
+
+---
+ tools/scons/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/scons/Makefile b/tools/scons/Makefile
+index bde3bee..7654f57 100644
+--- a/tools/scons/Makefile
++++ b/tools/scons/Makefile
+@@ -12,7 +12,7 @@ PKG_VERSION:=2.3.5
+ 
+ PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+ PKG_SOURCE_URL:=@SF/scons
+-PKG_MD5SUM:=a8988c7ef11133bb3b6ccf0af67ce010
++PKG_MD5SUM:=8b0d1041266f89b18e47f26d943f8aa5
+ 
+ include $(INCLUDE_DIR)/host-build.mk
+ 

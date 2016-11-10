@@ -1,0 +1,13 @@
+--- a/CMakeLists.txt	2016-11-09 17:47:36.649167477 +0100
++++ b/CMakeLists.txt	2016-11-09 17:49:05.139827203 +0100
+@@ -307,9 +307,7 @@
+
+ # --------------------------------------------------
+ # By default static library
+-OPTION(BUILD_SHARED_LIBS "Build shared libraries" OFF )
+-OPTION(BUILD_STATIC_LIBS "Build static libraries" ON )
+-#OPTION(BUILD_SHARED_LIBS "Build shared libraries" ON )
++OPTION(BUILD_SHARED_LIBS "Build shared libraries" ON )
+
+ if(NOT BLAS_FOUND)
+   set(ALL_TARGETS ${ALL_TARGETS} blas)

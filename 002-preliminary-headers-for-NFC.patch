@@ -1,0 +1,1321 @@
+
+diff --git a/drivers/base/Makefile b/drivers/base/Makefile
+index 6922cd6..53c3fe1 100644
+--- a/drivers/base/Makefile
++++ b/drivers/base/Makefile
+@@ -4,7 +4,7 @@ obj-y			:= component.o core.o bus.o dd.o syscore.o \
+ 			   driver.o class.o platform.o \
+ 			   cpu.o firmware.o init.o map.o devres.o \
+ 			   attribute_container.o transport_class.o \
+-			   topology.o container.o
++			   topology.o container.o property.o
+ obj-$(CONFIG_DEVTMPFS)	+= devtmpfs.o
+ obj-$(CONFIG_DMA_CMA) += dma-contiguous.o
+ obj-y			+= power/
+
+--- /dev/null
++++ b/drivers/base/property.c
+@@ -0,0 +1,431 @@
++/*
++ * property.c - Unified device property interface.
++ *
++ * Copyright (C) 2014, Intel Corporation
++ * Authors: Rafael J. Wysocki <rafael.j.wysocki@intel.com>
++ *          Mika Westerberg <mika.westerberg@linux.intel.com>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ */
++
++#include <linux/property.h>
++#include <linux/export.h>
++#include <linux/acpi.h>
++#include <linux/of.h>
++
++/**
++ * device_property_present - check if a property of a device is present
++ * @dev: Device whose property is being checked
++ * @propname: Name of the property
++ *
++ * Check if property @propname is present in the device firmware description.
++ */
++bool device_property_present(struct device *dev, const char *propname)
++{
++	if (IS_ENABLED(CONFIG_OF) && dev->of_node)
++		return of_property_read_bool(dev->of_node, propname);
++
++	return !acpi_dev_prop_get(ACPI_COMPANION(dev), propname, NULL);
++}
++EXPORT_SYMBOL_GPL(device_property_present);
++
++/**
++ * fwnode_property_present - check if a property of a firmware node is present
++ * @fwnode: Firmware node whose property to check
++ * @propname: Name of the property
++ */
++bool fwnode_property_present(struct fwnode_handle *fwnode, const char *propname)
++{
++	if (is_of_node(fwnode))
++		return of_property_read_bool(of_node(fwnode), propname);
++	else if (is_acpi_node(fwnode))
++		return !acpi_dev_prop_get(acpi_node(fwnode), propname, NULL);
++
++	return false;
++}
++EXPORT_SYMBOL_GPL(fwnode_property_present);
++
++#define OF_DEV_PROP_READ_ARRAY(node, propname, type, val, nval) \
++	(val) ? of_property_read_##type##_array((node), (propname), (val), (nval)) \
++	      : of_property_count_elems_of_size((node), (propname), sizeof(type))
++
++#define DEV_PROP_READ_ARRAY(_dev_, _propname_, _type_, _proptype_, _val_, _nval_) \
++	IS_ENABLED(CONFIG_OF) && _dev_->of_node ? \
++		(OF_DEV_PROP_READ_ARRAY(_dev_->of_node, _propname_, _type_, \
++					_val_, _nval_)) : \
++		acpi_dev_prop_read(ACPI_COMPANION(_dev_), _propname_, \
++				   _proptype_, _val_, _nval_)
++
++/**
++ * device_property_read_u8_array - return a u8 array property of a device
++ * @dev: Device to get the property of
++ * @propname: Name of the property
++ * @val: The values are stored here
++ * @nval: Size of the @val array
++ *
++ * Function reads an array of u8 properties with @propname from the device
++ * firmware description and stores them to @val if found.
++ *
++ * Return: %0 if the property was found (success),
++ *	   %-EINVAL if given arguments are not valid,
++ *	   %-ENODATA if the property does not have a value,
++ *	   %-EPROTO if the property is not an array of numbers,
++ *	   %-EOVERFLOW if the size of the property is not as expected.
++ */
++int device_property_read_u8_array(struct device *dev, const char *propname,
++				  u8 *val, size_t nval)
++{
++	return DEV_PROP_READ_ARRAY(dev, propname, u8, DEV_PROP_U8, val, nval);
++}
++EXPORT_SYMBOL_GPL(device_property_read_u8_array);
++
++/**
++ * device_property_read_u16_array - return a u16 array property of a device
++ * @dev: Device to get the property of
++ * @propname: Name of the property
++ * @val: The values are stored here
++ * @nval: Size of the @val array
++ *
++ * Function reads an array of u16 properties with @propname from the device
++ * firmware description and stores them to @val if found.
++ *
++ * Return: %0 if the property was found (success),
++ *	   %-EINVAL if given arguments are not valid,
++ *	   %-ENODATA if the property does not have a value,
++ *	   %-EPROTO if the property is not an array of numbers,
++ *	   %-EOVERFLOW if the size of the property is not as expected.
++ */
++int device_property_read_u16_array(struct device *dev, const char *propname,
++				   u16 *val, size_t nval)
++{
++	return DEV_PROP_READ_ARRAY(dev, propname, u16, DEV_PROP_U16, val, nval);
++}
++EXPORT_SYMBOL_GPL(device_property_read_u16_array);
++
++/**
++ * device_property_read_u32_array - return a u32 array property of a device
++ * @dev: Device to get the property of
++ * @propname: Name of the property
++ * @val: The values are stored here
++ * @nval: Size of the @val array
++ *
++ * Function reads an array of u32 properties with @propname from the device
++ * firmware description and stores them to @val if found.
++ *
++ * Return: %0 if the property was found (success),
++ *	   %-EINVAL if given arguments are not valid,
++ *	   %-ENODATA if the property does not have a value,
++ *	   %-EPROTO if the property is not an array of numbers,
++ *	   %-EOVERFLOW if the size of the property is not as expected.
++ */
++int device_property_read_u32_array(struct device *dev, const char *propname,
++				   u32 *val, size_t nval)
++{
++	return DEV_PROP_READ_ARRAY(dev, propname, u32, DEV_PROP_U32, val, nval);
++}
++EXPORT_SYMBOL_GPL(device_property_read_u32_array);
++
++/**
++ * device_property_read_u64_array - return a u64 array property of a device
++ * @dev: Device to get the property of
++ * @propname: Name of the property
++ * @val: The values are stored here
++ * @nval: Size of the @val array
++ *
++ * Function reads an array of u64 properties with @propname from the device
++ * firmware description and stores them to @val if found.
++ *
++ * Return: %0 if the property was found (success),
++ *	   %-EINVAL if given arguments are not valid,
++ *	   %-ENODATA if the property does not have a value,
++ *	   %-EPROTO if the property is not an array of numbers,
++ *	   %-EOVERFLOW if the size of the property is not as expected.
++ */
++int device_property_read_u64_array(struct device *dev, const char *propname,
++				   u64 *val, size_t nval)
++{
++	return DEV_PROP_READ_ARRAY(dev, propname, u64, DEV_PROP_U64, val, nval);
++}
++EXPORT_SYMBOL_GPL(device_property_read_u64_array);
++
++/**
++ * device_property_read_string_array - return a string array property of device
++ * @dev: Device to get the property of
++ * @propname: Name of the property
++ * @val: The values are stored here
++ * @nval: Size of the @val array
++ *
++ * Function reads an array of string properties with @propname from the device
++ * firmware description and stores them to @val if found.
++ *
++ * Return: %0 if the property was found (success),
++ *	   %-EINVAL if given arguments are not valid,
++ *	   %-ENODATA if the property does not have a value,
++ *	   %-EPROTO or %-EILSEQ if the property is not an array of strings,
++ *	   %-EOVERFLOW if the size of the property is not as expected.
++ */
++int device_property_read_string_array(struct device *dev, const char *propname,
++				      const char **val, size_t nval)
++{
++	return IS_ENABLED(CONFIG_OF) && dev->of_node ?
++		of_property_read_string_array(dev->of_node, propname, val, nval) :
++		acpi_dev_prop_read(ACPI_COMPANION(dev), propname,
++				   DEV_PROP_STRING, val, nval);
++}
++EXPORT_SYMBOL_GPL(device_property_read_string_array);
++
++/**
++ * device_property_read_string - return a string property of a device
++ * @dev: Device to get the property of
++ * @propname: Name of the property
++ * @val: The value is stored here
++ *
++ * Function reads property @propname from the device firmware description and
++ * stores the value into @val if found. The value is checked to be a string.
++ *
++ * Return: %0 if the property was found (success),
++ *	   %-EINVAL if given arguments are not valid,
++ *	   %-ENODATA if the property does not have a value,
++ *	   %-EPROTO or %-EILSEQ if the property type is not a string.
++ */
++int device_property_read_string(struct device *dev, const char *propname,
++				const char **val)
++{
++	return IS_ENABLED(CONFIG_OF) && dev->of_node ?
++		of_property_read_string(dev->of_node, propname, val) :
++		acpi_dev_prop_read(ACPI_COMPANION(dev), propname,
++				   DEV_PROP_STRING, val, 1);
++}
++EXPORT_SYMBOL_GPL(device_property_read_string);
++
++#define FWNODE_PROP_READ_ARRAY(_fwnode_, _propname_, _type_, _proptype_, _val_, _nval_) \
++({ \
++	int _ret_; \
++	if (is_of_node(_fwnode_)) \
++		_ret_ = OF_DEV_PROP_READ_ARRAY(of_node(_fwnode_), _propname_, \
++					       _type_, _val_, _nval_); \
++	else if (is_acpi_node(_fwnode_)) \
++		_ret_ = acpi_dev_prop_read(acpi_node(_fwnode_), _propname_, \
++					   _proptype_, _val_, _nval_); \
++	else \
++		_ret_ = -ENXIO; \
++	_ret_; \
++})
++
++/**
++ * fwnode_property_read_u8_array - return a u8 array property of firmware node
++ * @fwnode: Firmware node to get the property of
++ * @propname: Name of the property
++ * @val: The values are stored here
++ * @nval: Size of the @val array
++ *
++ * Read an array of u8 properties with @propname from @fwnode and stores them to
++ * @val if found.
++ *
++ * Return: %0 if the property was found (success),
++ *	   %-EINVAL if given arguments are not valid,
++ *	   %-ENODATA if the property does not have a value,
++ *	   %-EPROTO if the property is not an array of numbers,
++ *	   %-EOVERFLOW if the size of the property is not as expected,
++ *	   %-ENXIO if no suitable firmware interface is present.
++ */
++int fwnode_property_read_u8_array(struct fwnode_handle *fwnode,
++				  const char *propname, u8 *val, size_t nval)
++{
++	return FWNODE_PROP_READ_ARRAY(fwnode, propname, u8, DEV_PROP_U8,
++				      val, nval);
++}
++EXPORT_SYMBOL_GPL(fwnode_property_read_u8_array);
++
++/**
++ * fwnode_property_read_u16_array - return a u16 array property of firmware node
++ * @fwnode: Firmware node to get the property of
++ * @propname: Name of the property
++ * @val: The values are stored here
++ * @nval: Size of the @val array
++ *
++ * Read an array of u16 properties with @propname from @fwnode and store them to
++ * @val if found.
++ *
++ * Return: %0 if the property was found (success),
++ *	   %-EINVAL if given arguments are not valid,
++ *	   %-ENODATA if the property does not have a value,
++ *	   %-EPROTO if the property is not an array of numbers,
++ *	   %-EOVERFLOW if the size of the property is not as expected,
++ *	   %-ENXIO if no suitable firmware interface is present.
++ */
++int fwnode_property_read_u16_array(struct fwnode_handle *fwnode,
++				   const char *propname, u16 *val, size_t nval)
++{
++	return FWNODE_PROP_READ_ARRAY(fwnode, propname, u16, DEV_PROP_U16,
++				      val, nval);
++}
++EXPORT_SYMBOL_GPL(fwnode_property_read_u16_array);
++
++/**
++ * fwnode_property_read_u32_array - return a u32 array property of firmware node
++ * @fwnode: Firmware node to get the property of
++ * @propname: Name of the property
++ * @val: The values are stored here
++ * @nval: Size of the @val array
++ *
++ * Read an array of u32 properties with @propname from @fwnode store them to
++ * @val if found.
++ *
++ * Return: %0 if the property was found (success),
++ *	   %-EINVAL if given arguments are not valid,
++ *	   %-ENODATA if the property does not have a value,
++ *	   %-EPROTO if the property is not an array of numbers,
++ *	   %-EOVERFLOW if the size of the property is not as expected,
++ *	   %-ENXIO if no suitable firmware interface is present.
++ */
++int fwnode_property_read_u32_array(struct fwnode_handle *fwnode,
++				   const char *propname, u32 *val, size_t nval)
++{
++	return FWNODE_PROP_READ_ARRAY(fwnode, propname, u32, DEV_PROP_U32,
++				      val, nval);
++}
++EXPORT_SYMBOL_GPL(fwnode_property_read_u32_array);
++
++/**
++ * fwnode_property_read_u64_array - return a u64 array property firmware node
++ * @fwnode: Firmware node to get the property of
++ * @propname: Name of the property
++ * @val: The values are stored here
++ * @nval: Size of the @val array
++ *
++ * Read an array of u64 properties with @propname from @fwnode and store them to
++ * @val if found.
++ *
++ * Return: %0 if the property was found (success),
++ *	   %-EINVAL if given arguments are not valid,
++ *	   %-ENODATA if the property does not have a value,
++ *	   %-EPROTO if the property is not an array of numbers,
++ *	   %-EOVERFLOW if the size of the property is not as expected,
++ *	   %-ENXIO if no suitable firmware interface is present.
++ */
++int fwnode_property_read_u64_array(struct fwnode_handle *fwnode,
++				   const char *propname, u64 *val, size_t nval)
++{
++	return FWNODE_PROP_READ_ARRAY(fwnode, propname, u64, DEV_PROP_U64,
++				      val, nval);
++}
++EXPORT_SYMBOL_GPL(fwnode_property_read_u64_array);
++
++/**
++ * fwnode_property_read_string_array - return string array property of a node
++ * @fwnode: Firmware node to get the property of
++ * @propname: Name of the property
++ * @val: The values are stored here
++ * @nval: Size of the @val array
++ *
++ * Read an string list property @propname from the given firmware node and store
++ * them to @val if found.
++ *
++ * Return: %0 if the property was found (success),
++ *	   %-EINVAL if given arguments are not valid,
++ *	   %-ENODATA if the property does not have a value,
++ *	   %-EPROTO if the property is not an array of strings,
++ *	   %-EOVERFLOW if the size of the property is not as expected,
++ *	   %-ENXIO if no suitable firmware interface is present.
++ */
++int fwnode_property_read_string_array(struct fwnode_handle *fwnode,
++				      const char *propname, const char **val,
++				      size_t nval)
++{
++	if (is_of_node(fwnode))
++		return of_property_read_string_array(of_node(fwnode), propname,
++						     val, nval);
++	else if (is_acpi_node(fwnode))
++		return acpi_dev_prop_read(acpi_node(fwnode), propname,
++					  DEV_PROP_STRING, val, nval);
++
++	return -ENXIO;
++}
++EXPORT_SYMBOL_GPL(fwnode_property_read_string_array);
++
++/**
++ * fwnode_property_read_string - return a string property of a firmware node
++ * @fwnode: Firmware node to get the property of
++ * @propname: Name of the property
++ * @val: The value is stored here
++ *
++ * Read property @propname from the given firmware node and store the value into
++ * @val if found.  The value is checked to be a string.
++ *
++ * Return: %0 if the property was found (success),
++ *	   %-EINVAL if given arguments are not valid,
++ *	   %-ENODATA if the property does not have a value,
++ *	   %-EPROTO or %-EILSEQ if the property is not a string,
++ *	   %-ENXIO if no suitable firmware interface is present.
++ */
++int fwnode_property_read_string(struct fwnode_handle *fwnode,
++				const char *propname, const char **val)
++{
++	if (is_of_node(fwnode))
++		return of_property_read_string(of_node(fwnode),propname, val);
++	else if (is_acpi_node(fwnode))
++		return acpi_dev_prop_read(acpi_node(fwnode), propname,
++					  DEV_PROP_STRING, val, 1);
++
++	return -ENXIO;
++}
++EXPORT_SYMBOL_GPL(fwnode_property_read_string);
++
++/**
++ * device_get_next_child_node - Return the next child node handle for a device
++ * @dev: Device to find the next child node for.
++ * @child: Handle to one of the device's child nodes or a null handle.
++ */
++struct fwnode_handle *device_get_next_child_node(struct device *dev,
++						 struct fwnode_handle *child)
++{
++	if (IS_ENABLED(CONFIG_OF) && dev->of_node) {
++		struct device_node *node;
++
++		node = of_get_next_available_child(dev->of_node, of_node(child));
++		if (node)
++			return &node->fwnode;
++	} else if (IS_ENABLED(CONFIG_ACPI)) {
++		struct acpi_device *node;
++
++		node = acpi_get_next_child(dev, acpi_node(child));
++		if (node)
++			return acpi_fwnode_handle(node);
++	}
++	return NULL;
++}
++EXPORT_SYMBOL_GPL(device_get_next_child_node);
++
++/**
++ * fwnode_handle_put - Drop reference to a device node
++ * @fwnode: Pointer to the device node to drop the reference to.
++ *
++ * This has to be used when terminating device_for_each_child_node() iteration
++ * with break or return to prevent stale device node references from being left
++ * behind.
++ */
++void fwnode_handle_put(struct fwnode_handle *fwnode)
++{
++	if (is_of_node(fwnode))
++		of_node_put(of_node(fwnode));
++}
++EXPORT_SYMBOL_GPL(fwnode_handle_put);
++
++/**
++ * device_get_child_node_count - return the number of child nodes for device
++ * @dev: Device to cound the child nodes for
++ */
++unsigned int device_get_child_node_count(struct device *dev)
++{
++	struct fwnode_handle *child;
++	unsigned int count = 0;
++
++	device_for_each_child_node(dev, child)
++		count++;
++
++	return count;
++}
++EXPORT_SYMBOL_GPL(device_get_child_node_count);
+
+--- a/include/linux/acpi.h
++++ b/include/linux/acpi.h
+@@ -28,6 +28,7 @@
+ #include <linux/errno.h>
+ #include <linux/ioport.h>	/* for struct resource */
+ #include <linux/device.h>
++#include <linux/property.h>
+
+ #ifndef _LINUX
+ #define _LINUX
+@@ -123,6 +124,10 @@ int acpi_numa_init (void);
+
+ int acpi_table_init (void);
+ int acpi_table_parse(char *id, acpi_tbl_table_handler handler);
++int __init acpi_parse_entries(char *id, unsigned long table_size,
++			      acpi_tbl_entry_handler handler,
++			      struct acpi_table_header *table_header,
++			      int entry_id, unsigned int max_entries);
+ int __init acpi_table_parse_entries(char *id, unsigned long table_size,
+ 				    int entry_id,
+ 				    acpi_tbl_entry_handler handler,
+@@ -142,12 +147,13 @@ void acpi_numa_arch_fixup(void);
+
+ #ifdef CONFIG_ACPI_HOTPLUG_CPU
+ /* Arch dependent functions for cpu hotplug support */
+-int acpi_map_lsapic(acpi_handle handle, int physid, int *pcpu);
+-int acpi_unmap_lsapic(int cpu);
++int acpi_map_cpu(acpi_handle handle, int physid, int *pcpu);
++int acpi_unmap_cpu(int cpu);
+ #endif /* CONFIG_ACPI_HOTPLUG_CPU */
+
+ int acpi_register_ioapic(acpi_handle handle, u64 phys_addr, u32 gsi_base);
+ int acpi_unregister_ioapic(acpi_handle handle, u32 gsi_base);
++int acpi_ioapic_registered(acpi_handle handle, u32 gsi_base);
+ void acpi_irq_stats_init(void);
+ extern u32 acpi_irq_handled;
+ extern u32 acpi_irq_not_handled;
+@@ -423,14 +429,11 @@ extern int acpi_nvs_for_each_region(int (*func)(__u64, __u64, void *),
+ const struct acpi_device_id *acpi_match_device(const struct acpi_device_id *ids,
+ 					       const struct device *dev);
+
+-static inline bool acpi_driver_match_device(struct device *dev,
+-					    const struct device_driver *drv)
+-{
+-	return !!acpi_match_device(drv->acpi_match_table, dev);
+-}
+-
++extern bool acpi_driver_match_device(struct device *dev,
++				     const struct device_driver *drv);
+ int acpi_device_uevent_modalias(struct device *, struct kobj_uevent_env *);
+ int acpi_device_modalias(struct device *, char *, int);
++void acpi_walk_dep_device_list(acpi_handle handle);
+
+ struct platform_device *acpi_create_platform_device(struct acpi_device *);
+ #define ACPI_PTR(_ptr)	(_ptr)
+@@ -443,6 +446,23 @@ struct platform_device *acpi_create_platform_device(struct acpi_device *);
+ #define ACPI_COMPANION_SET(dev, adev)	do { } while (0)
+ #define ACPI_HANDLE(dev)		(NULL)
+
++struct fwnode_handle;
++
++static inline bool is_acpi_node(struct fwnode_handle *fwnode)
++{
++	return false;
++}
++
++static inline struct acpi_device *acpi_node(struct fwnode_handle *fwnode)
++{
++	return NULL;
++}
++
++static inline struct fwnode_handle *acpi_fwnode_handle(struct acpi_device *adev)
++{
++	return NULL;
++}
++
+ static inline const char *acpi_dev_name(struct acpi_device *adev)
+ {
+ 	return NULL;
+@@ -553,16 +573,26 @@ static inline void arch_reserve_mem_area(acpi_physical_address addr,
+ #define acpi_os_set_prepare_sleep(func, pm1a_ctrl, pm1b_ctrl) do { } while (0)
+ #endif
+
+-#if defined(CONFIG_ACPI) && defined(CONFIG_PM_RUNTIME)
++#if defined(CONFIG_ACPI) && defined(CONFIG_PM)
+ int acpi_dev_runtime_suspend(struct device *dev);
+ int acpi_dev_runtime_resume(struct device *dev);
+ int acpi_subsys_runtime_suspend(struct device *dev);
+ int acpi_subsys_runtime_resume(struct device *dev);
++struct acpi_device *acpi_dev_pm_get_node(struct device *dev);
++int acpi_dev_pm_attach(struct device *dev, bool power_on);
+ #else
+ static inline int acpi_dev_runtime_suspend(struct device *dev) { return 0; }
+ static inline int acpi_dev_runtime_resume(struct device *dev) { return 0; }
+ static inline int acpi_subsys_runtime_suspend(struct device *dev) { return 0; }
+ static inline int acpi_subsys_runtime_resume(struct device *dev) { return 0; }
++static inline struct acpi_device *acpi_dev_pm_get_node(struct device *dev)
++{
++	return NULL;
++}
++static inline int acpi_dev_pm_attach(struct device *dev, bool power_on)
++{
++	return -ENODEV;
++}
+ #endif
+
+ #if defined(CONFIG_ACPI) && defined(CONFIG_PM_SLEEP)
+@@ -585,20 +615,6 @@ static inline int acpi_subsys_suspend(struct device *dev) { return 0; }
+ static inline int acpi_subsys_freeze(struct device *dev) { return 0; }
+ #endif
+
+-#if defined(CONFIG_ACPI) && defined(CONFIG_PM)
+-struct acpi_device *acpi_dev_pm_get_node(struct device *dev);
+-int acpi_dev_pm_attach(struct device *dev, bool power_on);
+-#else
+-static inline struct acpi_device *acpi_dev_pm_get_node(struct device *dev)
+-{
+-	return NULL;
+-}
+-static inline int acpi_dev_pm_attach(struct device *dev, bool power_on)
+-{
+-	return -ENODEV;
+-}
+-#endif
+-
+ #ifdef CONFIG_ACPI
+ __printf(3, 4)
+ void acpi_handle_printk(const char *level, acpi_handle handle,
+@@ -659,4 +675,114 @@ do {									\
+ #endif
+ #endif
+
++struct acpi_gpio_params {
++	unsigned int crs_entry_index;
++	unsigned int line_index;
++	bool active_low;
++};
++
++struct acpi_gpio_mapping {
++	const char *name;
++	const struct acpi_gpio_params *data;
++	unsigned int size;
++};
++
++#if defined(CONFIG_ACPI) && defined(CONFIG_GPIOLIB)
++int acpi_dev_add_driver_gpios(struct acpi_device *adev,
++			      const struct acpi_gpio_mapping *gpios);
++
++static inline void acpi_dev_remove_driver_gpios(struct acpi_device *adev)
++{
++	if (adev)
++		adev->driver_gpios = NULL;
++}
++#else
++static inline int acpi_dev_add_driver_gpios(struct acpi_device *adev,
++			      const struct acpi_gpio_mapping *gpios)
++{
++	return -ENXIO;
++}
++static inline void acpi_dev_remove_driver_gpios(struct acpi_device *adev) {}
++#endif
++
++/* Device properties */
++
++#define MAX_ACPI_REFERENCE_ARGS	8
++struct acpi_reference_args {
++	struct acpi_device *adev;
++	size_t nargs;
++	u64 args[MAX_ACPI_REFERENCE_ARGS];
++};
++
++#ifdef CONFIG_ACPI
++int acpi_dev_get_property(struct acpi_device *adev, const char *name,
++			  acpi_object_type type, const union acpi_object **obj);
++int acpi_dev_get_property_array(struct acpi_device *adev, const char *name,
++				acpi_object_type type,
++				const union acpi_object **obj);
++int acpi_dev_get_property_reference(struct acpi_device *adev,
++				    const char *name, size_t index,
++				    struct acpi_reference_args *args);
++
++int acpi_dev_prop_get(struct acpi_device *adev, const char *propname,
++		      void **valptr);
++int acpi_dev_prop_read_single(struct acpi_device *adev, const char *propname,
++			      enum dev_prop_type proptype, void *val);
++int acpi_dev_prop_read(struct acpi_device *adev, const char *propname,
++		       enum dev_prop_type proptype, void *val, size_t nval);
++
++struct acpi_device *acpi_get_next_child(struct device *dev,
++					struct acpi_device *child);
++#else
++static inline int acpi_dev_get_property(struct acpi_device *adev,
++					const char *name, acpi_object_type type,
++					const union acpi_object **obj)
++{
++	return -ENXIO;
++}
++static inline int acpi_dev_get_property_array(struct acpi_device *adev,
++					      const char *name,
++					      acpi_object_type type,
++					      const union acpi_object **obj)
++{
++	return -ENXIO;
++}
++static inline int acpi_dev_get_property_reference(struct acpi_device *adev,
++				const char *name, const char *cells_name,
++				size_t index, struct acpi_reference_args *args)
++{
++	return -ENXIO;
++}
++
++static inline int acpi_dev_prop_get(struct acpi_device *adev,
++				    const char *propname,
++				    void **valptr)
++{
++	return -ENXIO;
++}
++
++static inline int acpi_dev_prop_read_single(struct acpi_device *adev,
++					    const char *propname,
++					    enum dev_prop_type proptype,
++					    void *val)
++{
++	return -ENXIO;
++}
++
++static inline int acpi_dev_prop_read(struct acpi_device *adev,
++				     const char *propname,
++				     enum dev_prop_type proptype,
++				     void *val, size_t nval)
++{
++	return -ENXIO;
++}
++
++static inline struct acpi_device *acpi_get_next_child(struct device *dev,
++						      struct acpi_device *child)
++{
++	return NULL;
++}
++
++#endif
++
+ #endif	/*_LINUX_ACPI_H*/
+
+--- /dev/null
++++ b/include/linux/fwnode.h
+@@ -0,0 +1,156 @@
++<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
++  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
++<html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'>
++<head>
++<title>kernel/git/stable/linux-stable.git - Linux kernel stable tree</title>
++<meta name='generator' content='cgit v0.12'/>
++<meta name='robots' content='index, nofollow'/>
++<link rel='stylesheet' type='text/css' href='/cgit-korg-0.10.1.css'/>
++<link rel='shortcut icon' href='/favicon.png'/>
++<link rel='alternate' title='Atom feed' href='http://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/atom/include/linux/fwnode.h?h=master' type='application/atom+xml'/>
++<link rel='vcs-git' href='git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git' title='kernel/git/stable/linux-stable.git Git repository'/>
++<link rel='vcs-git' href='https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git' title='kernel/git/stable/linux-stable.git Git repository'/>
++<link rel='vcs-git' href='https://kernel.googlesource.com/pub/scm/linux/kernel/git/stable/linux-stable.git' title='kernel/git/stable/linux-stable.git Git repository'/>
++</head>
++<body>
++<div id='cgit'><table id='header'>
++<tr>
++<td class='logo' rowspan='2'><a href='/cgit/'><img src='/tux-cgit.png' alt='cgit logo'/></a></td>
++<td class='main'><a href='/cgit/'>index</a> : <a title='kernel/git/stable/linux-stable.git' href='/cgit/linux/kernel/git/stable/linux-stable.git/'>kernel/git/stable/linux-stable.git</a></td><td class='form'><form method='get' action=''>
++<input type='hidden' name='id' value='refs/tags/v4.4.1'/><select name='h' onchange='this.form.submit();'>
++<option value='linux-2.6.11.y'>linux-2.6.11.y</option>
++<option value='linux-2.6.12.y'>linux-2.6.12.y</option>
++<option value='linux-2.6.13.y'>linux-2.6.13.y</option>
++<option value='linux-2.6.14.y'>linux-2.6.14.y</option>
++<option value='linux-2.6.15.y'>linux-2.6.15.y</option>
++<option value='linux-2.6.16.y'>linux-2.6.16.y</option>
++<option value='linux-2.6.17.y'>linux-2.6.17.y</option>
++<option value='linux-2.6.18.y'>linux-2.6.18.y</option>
++<option value='linux-2.6.19.y'>linux-2.6.19.y</option>
++<option value='linux-2.6.20.y'>linux-2.6.20.y</option>
++<option value='linux-2.6.21.y'>linux-2.6.21.y</option>
++<option value='linux-2.6.22.y'>linux-2.6.22.y</option>
++<option value='linux-2.6.23.y'>linux-2.6.23.y</option>
++<option value='linux-2.6.24.y'>linux-2.6.24.y</option>
++<option value='linux-2.6.25.y'>linux-2.6.25.y</option>
++<option value='linux-2.6.26.y'>linux-2.6.26.y</option>
++<option value='linux-2.6.27.y'>linux-2.6.27.y</option>
++<option value='linux-2.6.28.y'>linux-2.6.28.y</option>
++<option value='linux-2.6.29.y'>linux-2.6.29.y</option>
++<option value='linux-2.6.30.y'>linux-2.6.30.y</option>
++<option value='linux-2.6.31.y'>linux-2.6.31.y</option>
++<option value='linux-2.6.32.y'>linux-2.6.32.y</option>
++<option value='linux-2.6.33.y'>linux-2.6.33.y</option>
++<option value='linux-2.6.34.y'>linux-2.6.34.y</option>
++<option value='linux-2.6.35.y'>linux-2.6.35.y</option>
++<option value='linux-2.6.36.y'>linux-2.6.36.y</option>
++<option value='linux-2.6.37.y'>linux-2.6.37.y</option>
++<option value='linux-2.6.38.y'>linux-2.6.38.y</option>
++<option value='linux-2.6.39.y'>linux-2.6.39.y</option>
++<option value='linux-3.0.y'>linux-3.0.y</option>
++<option value='linux-3.1.y'>linux-3.1.y</option>
++<option value='linux-3.10.y'>linux-3.10.y</option>
++<option value='linux-3.11.y'>linux-3.11.y</option>
++<option value='linux-3.12.y'>linux-3.12.y</option>
++<option value='linux-3.13.y'>linux-3.13.y</option>
++<option value='linux-3.14.y'>linux-3.14.y</option>
++<option value='linux-3.15.y'>linux-3.15.y</option>
++<option value='linux-3.16.y'>linux-3.16.y</option>
++<option value='linux-3.17.y'>linux-3.17.y</option>
++<option value='linux-3.18.y'>linux-3.18.y</option>
++<option value='linux-3.19.y'>linux-3.19.y</option>
++<option value='linux-3.2.y'>linux-3.2.y</option>
++<option value='linux-3.3.y'>linux-3.3.y</option>
++<option value='linux-3.4.y'>linux-3.4.y</option>
++<option value='linux-3.5.y'>linux-3.5.y</option>
++<option value='linux-3.6.y'>linux-3.6.y</option>
++<option value='linux-3.7.y'>linux-3.7.y</option>
++<option value='linux-3.8.y'>linux-3.8.y</option>
++<option value='linux-3.9.y'>linux-3.9.y</option>
++<option value='linux-4.0.y'>linux-4.0.y</option>
++<option value='linux-4.1.y'>linux-4.1.y</option>
++<option value='linux-4.2.y'>linux-4.2.y</option>
++<option value='linux-4.3.y'>linux-4.3.y</option>
++<option value='linux-4.4.y'>linux-4.4.y</option>
++<option value='master' selected='selected'>master</option>
++</select> <input type='submit' name='' value='switch'/></form></td></tr>
++<tr><td class='sub'>Linux kernel stable tree</td><td class='sub right'>Greg Kroah-Hartman</td></tr></table>
++<table class='tabs'><tr><td>
++<a href='/cgit/linux/kernel/git/stable/linux-stable.git/'>summary</a><a href='/cgit/linux/kernel/git/stable/linux-stable.git/refs/?id=refs/tags/v4.4.1'>refs</a><a href='/cgit/linux/kernel/git/stable/linux-stable.git/log/include/linux/fwnode.h'>log</a><a class='active' href='/cgit/linux/kernel/git/stable/linux-stable.git/tree/include/linux/fwnode.h?id=refs/tags/v4.4.1'>tree</a><a href='/cgit/linux/kernel/git/stable/linux-stable.git/commit/include/linux/fwnode.h?id=refs/tags/v4.4.1'>commit</a><a href='/cgit/linux/kernel/git/stable/linux-stable.git/diff/include/linux/fwnode.h?id=refs/tags/v4.4.1'>diff</a><a href='/cgit/linux/kernel/git/stable/linux-stable.git/stats/include/linux/fwnode.h'>stats</a></td><td class='form'><form class='right' method='get' action='/cgit/linux/kernel/git/stable/linux-stable.git/log/include/linux/fwnode.h'>
++<input type='hidden' name='id' value='refs/tags/v4.4.1'/><select name='qt'>
++<option value='grep'>log msg</option>
++<option value='author'>author</option>
++<option value='committer'>committer</option>
++<option value='range'>range</option>
++</select>
++<input class='txt' type='text' size='10' name='q' value=''/>
++<input type='submit' value='search'/>
++</form>
++</td></tr></table>
++<div class='path'>path: <a href='/cgit/linux/kernel/git/stable/linux-stable.git/tree/?id=refs/tags/v4.4.1'>root</a>/<a href='/cgit/linux/kernel/git/stable/linux-stable.git/tree/include?id=refs/tags/v4.4.1'>include</a>/<a href='/cgit/linux/kernel/git/stable/linux-stable.git/tree/include/linux?id=refs/tags/v4.4.1'>linux</a>/<a href='/cgit/linux/kernel/git/stable/linux-stable.git/tree/include/linux/fwnode.h?id=refs/tags/v4.4.1'>fwnode.h</a></div><div class='content'>blob: 8516717427906948a215c56fad35ab462a8cbfda (<a href='/cgit/linux/kernel/git/stable/linux-stable.git/plain/include/linux/fwnode.h?id=refs/tags/v4.4.1'>plain</a>)
++<table summary='blob content' class='blob'>
++<tr><td class='linenumbers'><pre><a id='n1' href='#n1'>1</a>
++<a id='n2' href='#n2'>2</a>
++<a id='n3' href='#n3'>3</a>
++<a id='n4' href='#n4'>4</a>
++<a id='n5' href='#n5'>5</a>
++<a id='n6' href='#n6'>6</a>
++<a id='n7' href='#n7'>7</a>
++<a id='n8' href='#n8'>8</a>
++<a id='n9' href='#n9'>9</a>
++<a id='n10' href='#n10'>10</a>
++<a id='n11' href='#n11'>11</a>
++<a id='n12' href='#n12'>12</a>
++<a id='n13' href='#n13'>13</a>
++<a id='n14' href='#n14'>14</a>
++<a id='n15' href='#n15'>15</a>
++<a id='n16' href='#n16'>16</a>
++<a id='n17' href='#n17'>17</a>
++<a id='n18' href='#n18'>18</a>
++<a id='n19' href='#n19'>19</a>
++<a id='n20' href='#n20'>20</a>
++<a id='n21' href='#n21'>21</a>
++<a id='n22' href='#n22'>22</a>
++<a id='n23' href='#n23'>23</a>
++<a id='n24' href='#n24'>24</a>
++<a id='n25' href='#n25'>25</a>
++<a id='n26' href='#n26'>26</a>
++<a id='n27' href='#n27'>27</a>
++<a id='n28' href='#n28'>28</a>
++<a id='n29' href='#n29'>29</a>
++</pre></td>
++<td class='lines'><pre><code><span class="hl com">/*</span>
++<span class="hl com"> * fwnode.h - Firmware device node object handle type definition.</span>
++<span class="hl com"> *</span>
++<span class="hl com"> * Copyright (C) 2015, Intel Corporation</span>
++<span class="hl com"> * Author: Rafael J. Wysocki &lt;rafael.j.wysocki&#64;intel.com&gt;</span>
++<span class="hl com"> *</span>
++<span class="hl com"> * This program is free software; you can redistribute it and/or modify</span>
++<span class="hl com"> * it under the terms of the GNU General Public License version 2 as</span>
++<span class="hl com"> * published by the Free Software Foundation.</span>
++<span class="hl com"> */</span>
++
++<span class="hl ppc">#ifndef _LINUX_FWNODE_H_</span>
++<span class="hl ppc">#define _LINUX_FWNODE_H_</span>
++
++<span class="hl kwb">enum</span> fwnode_type <span class="hl opt">{</span>
++	FWNODE_INVALID <span class="hl opt">=</span> <span class="hl num">0</span><span class="hl opt">,</span>
++	FWNODE_OF<span class="hl opt">,</span>
++	FWNODE_ACPI<span class="hl opt">,</span>
++	FWNODE_ACPI_DATA<span class="hl opt">,</span>
++	FWNODE_PDATA<span class="hl opt">,</span>
++	FWNODE_IRQCHIP<span class="hl opt">,</span>
++<span class="hl opt">};</span>
++
++<span class="hl kwb">struct</span> fwnode_handle <span class="hl opt">{</span>
++	<span class="hl kwb">enum</span> fwnode_type type<span class="hl opt">;</span>
++	<span class="hl kwb">struct</span> fwnode_handle <span class="hl opt">*</span>secondary<span class="hl opt">;</span>
++<span class="hl opt">};</span>
++
++<span class="hl ppc">#endif</span>
++</code></pre></td></tr></table>
++</div> <!-- class=content -->
++<div class='footer'>generated by <a href='http://git.zx2c4.com/cgit/about/'>cgit v0.12</a> at 2016-02-12 17:32:00 (GMT)</div>
++</div> <!-- id=cgit -->
++</body>
++</html>
+
+--- a/include/linux/of.h
++++ b/include/linux/of.h
+@@ -23,6 +23,8 @@
+ #include <linux/spinlock.h>
+ #include <linux/topology.h>
+ #include <linux/notifier.h>
++#include <linux/property.h>
++#include <linux/list.h>
+
+ #include <asm/byteorder.h>
+ #include <asm/errno.h>
+@@ -49,14 +51,13 @@ struct device_node {
+ 	const char *type;
+ 	phandle phandle;
+ 	const char *full_name;
++	struct fwnode_handle fwnode;
+
+ 	struct	property *properties;
+ 	struct	property *deadprops;	/* removed properties */
+ 	struct	device_node *parent;
+ 	struct	device_node *child;
+ 	struct	device_node *sibling;
+-	struct	device_node *next;	/* next device of same type */
+-	struct	device_node *allnext;	/* next in list of all nodes */
+ 	struct	kobject kobj;
+ 	unsigned long _flags;
+ 	void	*data;
+@@ -74,11 +75,18 @@ struct of_phandle_args {
+ 	uint32_t args[MAX_PHANDLE_ARGS];
+ };
+
++struct of_reconfig_data {
++	struct device_node	*dn;
++	struct property		*prop;
++	struct property		*old_prop;
++};
++
+ /* initialize a node */
+ extern struct kobj_type of_node_ktype;
+ static inline void of_node_init(struct device_node *node)
+ {
+ 	kobject_init(&node->kobj, &of_node_ktype);
++	node->fwnode.type = FWNODE_OF;
+ }
+
+ /* true when node is initialized */
+@@ -105,18 +113,27 @@ static inline struct device_node *of_node_get(struct device_node *node)
+ static inline void of_node_put(struct device_node *node) { }
+ #endif /* !CONFIG_OF_DYNAMIC */
+
+-#ifdef CONFIG_OF
+-
+ /* Pointer for first entry in chain of all nodes. */
+-extern struct device_node *of_allnodes;
++extern struct device_node *of_root;
+ extern struct device_node *of_chosen;
+ extern struct device_node *of_aliases;
+ extern struct device_node *of_stdout;
+ extern raw_spinlock_t devtree_lock;
+
++#ifdef CONFIG_OF
++static inline bool is_of_node(struct fwnode_handle *fwnode)
++{
++	return fwnode && fwnode->type == FWNODE_OF;
++}
++
++static inline struct device_node *of_node(struct fwnode_handle *fwnode)
++{
++	return fwnode ? container_of(fwnode, struct device_node, fwnode) : NULL;
++}
++
+ static inline bool of_have_populated_dt(void)
+ {
+-	return of_allnodes != NULL;
++	return of_root != NULL;
+ }
+
+ static inline bool of_node_is_root(const struct device_node *node)
+@@ -160,6 +177,7 @@ static inline void of_property_clear_flag(struct property *p, unsigned long flag
+ 	clear_bit(flag, &p->_flags);
+ }
+
++extern struct device_node *__of_find_all_nodes(struct device_node *prev);
+ extern struct device_node *of_find_all_nodes(struct device_node *prev);
+
+ /*
+@@ -215,8 +233,9 @@ static inline const char *of_node_full_name(const struct device_node *np)
+ 	return np ? np->full_name : "<no-node>";
+ }
+
+-#define for_each_of_allnodes(dn) \
+-	for (dn = of_allnodes; dn; dn = dn->allnext)
++#define for_each_of_allnodes_from(from, dn) \
++	for (dn = __of_find_all_nodes(from); dn; dn = __of_find_all_nodes(dn))
++#define for_each_of_allnodes(dn) for_each_of_allnodes_from(NULL, dn)
+ extern struct device_node *of_find_node_by_name(struct device_node *from,
+ 	const char *name);
+ extern struct device_node *of_find_node_by_type(struct device_node *from,
+@@ -228,7 +247,13 @@ extern struct device_node *of_find_matching_node_and_match(
+ 	const struct of_device_id *matches,
+ 	const struct of_device_id **match);
+
+-extern struct device_node *of_find_node_by_path(const char *path);
++extern struct device_node *of_find_node_opts_by_path(const char *path,
++	const char **opts);
++static inline struct device_node *of_find_node_by_path(const char *path)
++{
++	return of_find_node_opts_by_path(path, NULL);
++}
++
+ extern struct device_node *of_find_node_by_phandle(phandle handle);
+ extern struct device_node *of_get_parent(const struct device_node *node);
+ extern struct device_node *of_get_next_parent(struct device_node *node);
+@@ -263,6 +288,10 @@ extern int of_property_read_u32_array(const struct device_node *np,
+ 				      size_t sz);
+ extern int of_property_read_u64(const struct device_node *np,
+ 				const char *propname, u64 *out_value);
++extern int of_property_read_u64_array(const struct device_node *np,
++				      const char *propname,
++				      u64 *out_values,
++				      size_t sz);
+
+ extern int of_property_read_string(struct device_node *np,
+ 				   const char *propname,
+@@ -275,7 +304,7 @@ extern int of_property_read_string_helper(struct device_node *np,
+ 					      const char **out_strs, size_t sz, int index);
+ extern int of_device_is_compatible(const struct device_node *device,
+ 				   const char *);
+-extern int of_device_is_available(const struct device_node *device);
++extern bool of_device_is_available(const struct device_node *device);
+ extern const void *of_get_property(const struct device_node *node,
+ 				const char *name,
+ 				int *lenp);
+@@ -317,16 +346,6 @@ extern int of_update_property(struct device_node *np, struct property *newprop);
+ #define OF_RECONFIG_REMOVE_PROPERTY	0x0004
+ #define OF_RECONFIG_UPDATE_PROPERTY	0x0005
+
+-struct of_prop_reconfig {
+-	struct device_node	*dn;
+-	struct property		*prop;
+-	struct property		*old_prop;
+-};
+-
+-extern int of_reconfig_notifier_register(struct notifier_block *);
+-extern int of_reconfig_notifier_unregister(struct notifier_block *);
+-extern int of_reconfig_notify(unsigned long, void *);
+-
+ extern int of_attach_node(struct device_node *);
+ extern int of_detach_node(struct device_node *);
+
+@@ -355,6 +374,16 @@ bool of_console_check(struct device_node *dn, char *name, int index);
+
+ #else /* CONFIG_OF */
+
++static inline bool is_of_node(struct fwnode_handle *fwnode)
++{
++	return false;
++}
++
++static inline struct device_node *of_node(struct fwnode_handle *fwnode)
++{
++	return NULL;
++}
++
+ static inline const char* of_node_full_name(const struct device_node *np)
+ {
+ 	return "<no-node>";
+@@ -385,6 +414,12 @@ static inline struct device_node *of_find_node_by_path(const char *path)
+ 	return NULL;
+ }
+
++static inline struct device_node *of_find_node_opts_by_path(const char *path,
++	const char **opts)
++{
++	return NULL;
++}
++
+ static inline struct device_node *of_get_parent(const struct device_node *node)
+ {
+ 	return NULL;
+@@ -426,9 +461,9 @@ static inline int of_device_is_compatible(const struct device_node *device,
+ 	return 0;
+ }
+
+-static inline int of_device_is_available(const struct device_node *device)
++static inline bool of_device_is_available(const struct device_node *device)
+ {
+-	return 0;
++	return false;
+ }
+
+ static inline struct property *of_find_property(const struct device_node *np,
+@@ -477,6 +512,13 @@ static inline int of_property_read_u32_array(const struct device_node *np,
+ 	return -ENOSYS;
+ }
+
++static inline int of_property_read_u64_array(const struct device_node *np,
++					     const char *propname,
++					     u64 *out_values, size_t sz)
++{
++	return -ENOSYS;
++}
++
+ static inline int of_property_read_string(struct device_node *np,
+ 					  const char *propname,
+ 					  const char **out_string)
+@@ -760,6 +802,13 @@ static inline int of_property_read_u32(const struct device_node *np,
+ 	return of_property_read_u32_array(np, propname, out_value, 1);
+ }
+
++static inline int of_property_read_s32(const struct device_node *np,
++				       const char *propname,
++				       s32 *out_value)
++{
++	return of_property_read_u32(np, propname, (u32*) out_value);
++}
++
+ #define of_property_for_each_u32(np, propname, prop, p, u)	\
+ 	for (prop = of_find_property(np, propname, NULL),	\
+ 		p = of_prop_next_u32(prop, NULL, &u);		\
+@@ -828,7 +877,7 @@ static inline int of_get_available_child_count(const struct device_node *np)
+ 		 = { .compatible = compat,				\
+ 		     .data = (fn == (fn_type)NULL) ? fn : fn  }
+ #else
+-#define _OF_DECLARE(table, name, compat, fn, fn_type)					\
++#define _OF_DECLARE(table, name, compat, fn, fn_type)			\
+ 	static const struct of_device_id __of_table_##name		\
+ 		__attribute__((unused))					\
+ 		 = { .compatible = compat,				\
+@@ -879,7 +928,19 @@ struct of_changeset {
+ 	struct list_head entries;
+ };
+
++enum of_reconfig_change {
++	OF_RECONFIG_NO_CHANGE = 0,
++	OF_RECONFIG_CHANGE_ADD,
++	OF_RECONFIG_CHANGE_REMOVE,
++};
++
+ #ifdef CONFIG_OF_DYNAMIC
++extern int of_reconfig_notifier_register(struct notifier_block *);
++extern int of_reconfig_notifier_unregister(struct notifier_block *);
++extern int of_reconfig_notify(unsigned long, struct of_reconfig_data *rd);
++extern int of_reconfig_get_state_change(unsigned long action,
++					struct of_reconfig_data *arg);
++
+ extern void of_changeset_init(struct of_changeset *ocs);
+ extern void of_changeset_destroy(struct of_changeset *ocs);
+ extern int of_changeset_apply(struct of_changeset *ocs);
+@@ -917,9 +978,69 @@ static inline int of_changeset_update_property(struct of_changeset *ocs,
+ {
+ 	return of_changeset_action(ocs, OF_RECONFIG_UPDATE_PROPERTY, np, prop);
+ }
+-#endif
++#else /* CONFIG_OF_DYNAMIC */
++static inline int of_reconfig_notifier_register(struct notifier_block *nb)
++{
++	return -EINVAL;
++}
++static inline int of_reconfig_notifier_unregister(struct notifier_block *nb)
++{
++	return -EINVAL;
++}
++static inline int of_reconfig_notify(unsigned long action,
++				     struct of_reconfig_data *arg)
++{
++	return -EINVAL;
++}
++static inline int of_reconfig_get_state_change(unsigned long action,
++						struct of_reconfig_data *arg)
++{
++	return -EINVAL;
++}
++#endif /* CONFIG_OF_DYNAMIC */
+
+ /* CONFIG_OF_RESOLVE api */
+ extern int of_resolve_phandles(struct device_node *tree);
+
++/**
++ * of_device_is_system_power_controller - Tells if system-power-controller is found for device_node
++ * @np: Pointer to the given device_node
++ *
++ * return true if present false otherwise
++ */
++static inline bool of_device_is_system_power_controller(const struct device_node *np)
++{
++	return of_property_read_bool(np, "system-power-controller");
++}
++
++/**
++ * Overlay support
++ */
++
++#ifdef CONFIG_OF_OVERLAY
++
++/* ID based overlays; the API for external users */
++int of_overlay_create(struct device_node *tree);
++int of_overlay_destroy(int id);
++int of_overlay_destroy_all(void);
++
++#else
++
++static inline int of_overlay_create(struct device_node *tree)
++{
++	return -ENOTSUPP;
++}
++
++static inline int of_overlay_destroy(int id)
++{
++	return -ENOTSUPP;
++}
++
++static inline int of_overlay_destroy_all(void)
++{
++	return -ENOTSUPP;
++}
++
++#endif
++
+ #endif /* _LINUX_OF_H */
+
+--- /dev/null
++++ b/include/linux/property.h
+@@ -0,0 +1,143 @@
++/*
++ * property.h - Unified device property interface.
++ *
++ * Copyright (C) 2014, Intel Corporation
++ * Authors: Rafael J. Wysocki <rafael.j.wysocki@intel.com>
++ *          Mika Westerberg <mika.westerberg@linux.intel.com>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ */
++
++#ifndef _LINUX_PROPERTY_H_
++#define _LINUX_PROPERTY_H_
++
++#include <linux/types.h>
++
++struct device;
++
++enum dev_prop_type {
++	DEV_PROP_U8,
++	DEV_PROP_U16,
++	DEV_PROP_U32,
++	DEV_PROP_U64,
++	DEV_PROP_STRING,
++	DEV_PROP_MAX,
++};
++
++bool device_property_present(struct device *dev, const char *propname);
++int device_property_read_u8_array(struct device *dev, const char *propname,
++				  u8 *val, size_t nval);
++int device_property_read_u16_array(struct device *dev, const char *propname,
++				   u16 *val, size_t nval);
++int device_property_read_u32_array(struct device *dev, const char *propname,
++				   u32 *val, size_t nval);
++int device_property_read_u64_array(struct device *dev, const char *propname,
++				   u64 *val, size_t nval);
++int device_property_read_string_array(struct device *dev, const char *propname,
++				      const char **val, size_t nval);
++int device_property_read_string(struct device *dev, const char *propname,
++				const char **val);
++
++enum fwnode_type {
++	FWNODE_INVALID = 0,
++	FWNODE_OF,
++	FWNODE_ACPI,
++};
++
++struct fwnode_handle {
++	enum fwnode_type type;
++};
++
++bool fwnode_property_present(struct fwnode_handle *fwnode, const char *propname);
++int fwnode_property_read_u8_array(struct fwnode_handle *fwnode,
++				  const char *propname, u8 *val,
++				  size_t nval);
++int fwnode_property_read_u16_array(struct fwnode_handle *fwnode,
++				   const char *propname, u16 *val,
++				   size_t nval);
++int fwnode_property_read_u32_array(struct fwnode_handle *fwnode,
++				   const char *propname, u32 *val,
++				   size_t nval);
++int fwnode_property_read_u64_array(struct fwnode_handle *fwnode,
++				   const char *propname, u64 *val,
++				   size_t nval);
++int fwnode_property_read_string_array(struct fwnode_handle *fwnode,
++				      const char *propname, const char **val,
++				      size_t nval);
++int fwnode_property_read_string(struct fwnode_handle *fwnode,
++				const char *propname, const char **val);
++
++struct fwnode_handle *device_get_next_child_node(struct device *dev,
++						 struct fwnode_handle *child);
++
++#define device_for_each_child_node(dev, child) \
++	for (child = device_get_next_child_node(dev, NULL); child; \
++	     child = device_get_next_child_node(dev, child))
++
++void fwnode_handle_put(struct fwnode_handle *fwnode);
++
++unsigned int device_get_child_node_count(struct device *dev);
++
++static inline bool device_property_read_bool(struct device *dev,
++					     const char *propname)
++{
++	return device_property_present(dev, propname);
++}
++
++static inline int device_property_read_u8(struct device *dev,
++					  const char *propname, u8 *val)
++{
++	return device_property_read_u8_array(dev, propname, val, 1);
++}
++
++static inline int device_property_read_u16(struct device *dev,
++					   const char *propname, u16 *val)
++{
++	return device_property_read_u16_array(dev, propname, val, 1);
++}
++
++static inline int device_property_read_u32(struct device *dev,
++					   const char *propname, u32 *val)
++{
++	return device_property_read_u32_array(dev, propname, val, 1);
++}
++
++static inline int device_property_read_u64(struct device *dev,
++					   const char *propname, u64 *val)
++{
++	return device_property_read_u64_array(dev, propname, val, 1);
++}
++
++static inline bool fwnode_property_read_bool(struct fwnode_handle *fwnode,
++					     const char *propname)
++{
++	return fwnode_property_present(fwnode, propname);
++}
++
++static inline int fwnode_property_read_u8(struct fwnode_handle *fwnode,
++					  const char *propname, u8 *val)
++{
++	return fwnode_property_read_u8_array(fwnode, propname, val, 1);
++}
++
++static inline int fwnode_property_read_u16(struct fwnode_handle *fwnode,
++					   const char *propname, u16 *val)
++{
++	return fwnode_property_read_u16_array(fwnode, propname, val, 1);
++}
++
++static inline int fwnode_property_read_u32(struct fwnode_handle *fwnode,
++					   const char *propname, u32 *val)
++{
++	return fwnode_property_read_u32_array(fwnode, propname, val, 1);
++}
++
++static inline int fwnode_property_read_u64(struct fwnode_handle *fwnode,
++					   const char *propname, u64 *val)
++{
++	return fwnode_property_read_u64_array(fwnode, propname, val, 1);
++}
++
++#endif /* _LINUX_PROPERTY_H_ */

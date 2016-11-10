@@ -1,0 +1,304 @@
+From 75f7df48c135a0c91de4ee2428b816b8cd23ffd4 Mon Sep 17 00:00:00 2001
+From: m13 <mimmo@linino.org>
+Date: Wed, 4 Mar 2015 16:35:46 +0100
+Subject: [PATCH 10/24] Add new uboot environment also for yun, one, and
+ freedog linino boards
+
+---
+ Makefile                 |  24 ++++++++---
+ include/configs/ap121.h  | 109 ++++++++++++++++++++++++++++++++++++++---------
+ include/configs/ap123.h  |  46 +++++++++-----------
+ include/configs/ar7240.h |  15 +++++++
+ 4 files changed, 144 insertions(+), 50 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 45825e1..18136bc 100644
+--- a/Makefile
++++ b/Makefile
+@@ -335,14 +335,28 @@ ifeq ($(CONFIG_LININO_DDR2), 1)
+ 	@echo "#define CONFIG_LININO_DDR2 1" >>include/config.h
+ endif
+ 
++#########################################################################
++## LININO BOARDS MIPS32 AR7100 (24K)
++#########################################################################
+ 
+ linino_config		    : 	unconfig    hornet_common_config
+ 	@echo "#define FLASH_SIZE $(FLASH_SIZE)" >>include/config.h
+-ifdef BOARD_STRING
+-	@echo "#define BOARD_STRING 1" >>include/config.h
+-endif
++	@echo '#define CONFIG_LININO 1' >>include/config.h
++	@echo "#define CONFIG_HORNET_1_1_WAR 1" >>include/config.h
++	@echo "#define NEW_DDR_TAP_CAL 1" >>include/config.h
++	@echo "#define CONFIG_LININO_DDR2 1" >>include/config.h
++
+ 	@./mkconfig -a ap121 mips mips ap121 ar7240 ar7240 linino
+ 	
++linino_yun_config	:	linino_config
++	@echo '#define CONFIG_LININO_YUN 1' >>include/config.h
++
++linino_one_config	: 	linino_config
++	@echo '#define CONFIG_LININO_ONE 1' >>include/config.h
++
++linino_free_config	: 	linino_config
++	@echo '#define CONFIG_LININO_FREEDOG 1' >>include/config.h
++
+ linino_chow_config		    : 	unconfig
+ 	@echo '#define CONFIG_LININO 1' >>include/config.h
+ 	@echo '#define CONFIG_AP123 1' >>include/config.h
+@@ -352,9 +366,7 @@ linino_chow_config		    : 	unconfig
+ 	@echo '#define CFG_AG7240_NMACS 1' >>include/config.h
+ 	@echo "#define FLASH_SIZE $(FLASH_SIZE)" >>include/config.h
+ 	@echo '#define CONFIG_F1E_PHY 1' >>include/config.h
+-ifdef BOARD_STRING
+-	@echo "#define BOARD_STRING 1" >>include/config.h
+-endif
++
+ 	@./mkconfig -a ap123 mips mips ap123 ar7240 ar7240 linino
+ 	
+ #########################################################################
+diff --git a/include/configs/ap121.h b/include/configs/ap121.h
+index d364c3b..a69ecf1 100644
+--- a/include/configs/ap121.h
++++ b/include/configs/ap121.h
+@@ -80,30 +80,97 @@
+ #define	CFG_MONITOR_LEN		(192 << 10)
+ 
+ #undef CONFIG_BOOTARGS
+-/* XXX - putting rootfs in last partition results in jffs errors */
+-
+ /* default mtd partition table */
+ #undef MTDPARTS_DEFAULT
+ 
+-#if (FLASH_SIZE == 16)
+-#define CONFIG_BOOTARGS     "console=ttyS0,115200 root=31:02 rootfstype=squashfs init=/sbin/init mtdparts=ar7240-nor0:256k(u-boot),64k(u-boot-env),14656k(rootfs),1280k(uImage),64k(NVRAM),64k(ART)"
+-#define MTDPARTS_DEFAULT    "mtdparts=ar7240-nor0:256k(u-boot),64k(u-boot-env),14656k(rootfs),1280k(uImage),64k(NVRAM),64k(ART)"
+-#elif (FLASH_SIZE == 8)
+-#define	CONFIG_BOOTARGS     "console=ttyS0,115200 root=31:02 rootfstype=squashfs init=/sbin/init mtdparts=ar7240-nor0:256k(u-boot),64k(u-boot-env),6464k(rootfs),1280k(uImage),64k(NVRAM),64k(ART)"
+-#define MTDPARTS_DEFAULT    "mtdparts=ar7240-nor0:256k(u-boot),64k(u-boot-env),6464k(rootfs),1280k(uImage),64k(NVRAM),64k(ART)"
+-#elif (FLASH_SIZE == 4)
+-#define	CONFIG_BOOTARGS     "console=ttyS0,115200 root=31:02 rootfstype=squashfs init=/sbin/init mtdparts=ar7240-nor0:256k(u-boot),64k(u-boot-env),2752k(rootfs),896k(uImage),64k(NVRAM),64k(ART)"
+-#define MTDPARTS_DEFAULT    "mtdparts=ar7240-nor0:256k(u-boot),64k(u-boot-env),2752k(rootfs),896k(uImage),64k(NVRAM),64k(ART)"
++#if defined (CONFIG_LININO)
++#		define ATH_U_FILE	u-boot.bin
++#		define ATH_F_FILE	lininoIO-generic-${board}-rootfs-squashfs.bin
++#		define ATH_F_LEN	$filesize
++#		define ATH_F_ADDR	0x9f050000
++#		define ATH_K_FILE	lininoIO-generic-${board}-kernel.bin
++#		define ATH_K_ADDR	0x9fEa0000
++
++#		define MTDPARTS_DEFAULT		"mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env),14656k(rootfs),1280k(kernel),64k(nvram),64k(art),15936k@0x50000(firmware)\0"
++#		define MTDPARTSENV_DEFAULT	"addparts=setenv bootargs ${bootargs} mtdparts=${mtdparts}\0"
++#		define ROOTFS_DEFAULT		"rootfstype=squashfs,jffs2 noinitrd "
++#		define ROOTFSENV_DEFAULT	"addrootfs=setenv bootargs ${bootargs} rootfstype=squashfs,jffs2 noinitrd\0"
++#		define BOARDENV_DEFAULT		"addboard=setenv bootargs board=${board}\0"
++#		define TTYENV_DEFAULT		"addtty=setenv bootargs ${bootargs} console=${console}\0"
++#		define ERASE_ENV			"erase_env=erase 0x9f040000 +0x10000\0"
++#		if CONFIG_LININO_YUN
++#			define BOARD_DEFAULT	"board=linino-yun\0"
++#		elif CONFIG_LININO_ONE
++#			define BOARD_DEFAULT	"board=linino-one\0"
++#		elif CONFIG_LININO_FREEDOG
++#			define BOARD_DEFAULT	"board=linino-freedog\0"
++#		else 
++#			define BOARD_DEFAULT	"board=linino\0"
++#		endif
++#		if CONFIG_LININO_IO
++#			define CONSOLE_LININOIO_DEFAULT	"console=spicons\0"
++#		else
++#			define CONSOLE_DEFAULT	"console=ttyATH0,250000\0"
++#		endif
++#		undef CONFIG_BAUDRATE
++#		define CONFIG_BAUDRATE	250000
++#	endif
++
++#ifndef CONFIG_LININO
++#	if (FLASH_SIZE == 16)
++#		define CONFIG_BOOTARGS     "console=ttyS0,115200 root=31:02 rootfstype=squashfs init=/sbin/init mtdparts=ar7240-nor0:256k(u-boot),64k(u-boot-env),14656k(rootfs),1280k(uImage),64k(NVRAM),64k(ART)"
++#		define MTDPARTS_DEFAULT    "mtdparts=ar7240-nor0:256k(u-boot),64k(u-boot-env),14656k(rootfs),1280k(uImage),64k(NVRAM),64k(ART)"
++#	elif (FLASH_SIZE == 8)
++#		define	CONFIG_BOOTARGS     "console=ttyS0,115200 root=31:02 rootfstype=squashfs init=/sbin/init mtdparts=ar7240-nor0:256k(u-boot),64k(u-boot-env),6464k(rootfs),1280k(uImage),64k(NVRAM),64k(ART)"
++#		define MTDPARTS_DEFAULT    "mtdparts=ar7240-nor0:256k(u-boot),64k(u-boot-env),6464k(rootfs),1280k(uImage),64k(NVRAM),64k(ART)"
++#	elif (FLASH_SIZE == 4)
++#		define	CONFIG_BOOTARGS     "console=ttyS0,115200 root=31:02 rootfstype=squashfs init=/sbin/init mtdparts=ar7240-nor0:256k(u-boot),64k(u-boot-env),2752k(rootfs),896k(uImage),64k(NVRAM),64k(ART)"
++#		define MTDPARTS_DEFAULT    "mtdparts=ar7240-nor0:256k(u-boot),64k(u-boot-env),2752k(rootfs),896k(uImage),64k(NVRAM),64k(ART)"
++#	else
++#		define	CONFIG_BOOTARGS     "console=ttyS0,115200 root=31:01 rootfstype=squashfs init=/sbin/init mtdparts=ar7240-nor0:64k(u-boot),1216k(rootfs),640k(uImage),64k(NVRAM),64k(ART)"
++#		define MTDPARTS_DEFAULT    "mtdparts=ar7240-nor0:64k(u-boot),1152k(rootfs),704k(uImage),64k(NVRAM),64k(ART)"
++#	endif
++
++
++#	if (BOARD_STRING == 1)
++#		undef CONFIG_BOOTARGS
++#		undef MTDPARTS_DEFAULT
++#		define	CONFIG_BOOTARGS     "console=ttyS0,115200 root=31:01 rootfstype=squashfs init=/sbin/init mtdparts=ar7240-nor0:64k(u-boot),3008k(rootfs),896k(uImage),64k(mib0),64k(ART)"
++#		define MTDPARTS_DEFAULT    "mtdparts=ar7240-nor0:64k(u-boot),3008k(rootfs),896k(uImage),64k(NVRAM),64k(ART)"
++#	endif
+ #else
+-#define	CONFIG_BOOTARGS     "console=ttyS0,115200 root=31:01 rootfstype=squashfs init=/sbin/init mtdparts=ar7240-nor0:64k(u-boot),1216k(rootfs),640k(uImage),64k(NVRAM),64k(ART)"
+-#define MTDPARTS_DEFAULT    "mtdparts=ar7240-nor0:64k(u-boot),1152k(rootfs),704k(uImage),64k(NVRAM),64k(ART)"
++
++// CONFIG_LININO
++
++#ifndef ATH_EXTRA_ENV
++#	define ATH_EXTRA_ENV
+ #endif
+ 
+-#if (BOARD_STRING == 1)
+-#undef CONFIG_BOOTARGS
+-#undef MTDPARTS_DEFAULT
+-#define	CONFIG_BOOTARGS     "console=ttyS0,115200 root=31:01 rootfstype=squashfs init=/sbin/init mtdparts=ar7240-nor0:64k(u-boot),3008k(rootfs),896k(uImage),64k(mib0),64k(ART)"
+-#define MTDPARTS_DEFAULT    "mtdparts=ar7240-nor0:64k(u-boot),3008k(rootfs),896k(uImage),64k(NVRAM),64k(ART)"
++#ifndef ATH_U_CMD
++#	define ATH_U_CMD	gen_cmd(lu, 0x9f000000, ATH_U_FILE)
++#endif
++
++#ifndef ATH_F_CMD
++#	define ATH_F_CMD	gen_cmd_el(lf, ATH_F_ADDR, ATH_F_FILE, ATH_F_LEN)
++#endif
++
++#ifndef ATH_K_CMD
++#	define ATH_K_CMD	gen_cmd(lk, ATH_K_ADDR, ATH_K_FILE)
++#endif
++
++#define CONFIG_EXTRA_ENV_SETTINGS	\
++	BOARD_DEFAULT	\
++	BOARDENV_DEFAULT	\
++	CONSOLE_DEFAULT	\
++	TTYENV_DEFAULT	\
++	MTDPARTS_DEFAULT	\
++	MTDPARTSENV_DEFAULT	\
++	ROOTFSENV_DEFAULT	\
++	ERASE_ENV	\
++	"dir=\0" ATH_U_CMD ATH_F_CMD ATH_K_CMD ""
++
++#define	CONFIG_BOOTARGS
++
+ #endif
+ 
+ #undef CFG_PLL_FREQ
+@@ -223,7 +290,11 @@
+ #define CFG_ENV_SIZE		0x10000
+ 
+ #if (FLASH_SIZE == 16)
+-    #define CONFIG_BOOTCOMMAND "bootm 0x9fea0000"
++#		ifdef CONFIG_LININO
++#			define CONFIG_BOOTCOMMAND	"run addboard; run addtty;run addparts; run addrootfs; bootm 0x9fEa0000"
++#		else
++#			define CONFIG_BOOTCOMMAND "bootm 0x9fea0000"
++#		endif
+ #elif (FLASH_SIZE == 8)
+     #define CONFIG_BOOTCOMMAND "bootm 0x9f6a0000"
+ #elif (FLASH_SIZE == 4)
+diff --git a/include/configs/ap123.h b/include/configs/ap123.h
+index 7622b03..737d480 100644
+--- a/include/configs/ap123.h
++++ b/include/configs/ap123.h
+@@ -97,20 +97,6 @@
+ #	endif
+ #endif
+ 
+-#define __gen_cmd(n, a, f, ec, cc, el)		\
+-	#n "=tftp 0x80060000 ${dir}" #f "&&"	\
+-	#ec " " #a " " #el "&&"			\
+-	#cc " $fileaddr " #a " $filesize\0"
+-
+-#define gen_cmd(n, a, f)			\
+-	__gen_cmd(n, a, f, erase, cp.b, +$filesize)
+-
+-#define gen_cmd_el(n, a, f, el)			\
+-	__gen_cmd(n, a, f, erase, cp.b, +el)
+-
+-#define nand_gen_cmd(n, a, f, s)		\
+-	__gen_cmd(n, a, f, nand erase, nand write, s)
+-
+ #ifdef CONFIG_ATH_NAND_SUPPORT
+ #	ifdef CONFIG_ATH_NAND_BR	// nand boot rom
+ #		define ATH_U_CMD	nand_gen_cmd(lu, 0x0, 2fw.bin, 0x40000)
+@@ -153,19 +139,26 @@
+ #		define MTDPARTS_DEFAULT	"mtdparts=ath-nor0:32k(u-boot1),32k(u-boot2),3008k(rootfs),896k(uImage),64k(mib0),64k(ART)"
+ #	elif defined (CONFIG_LININO)
+ #		define ATH_U_FILE	u-boot.bin
+-#		define ATH_F_FILE	lininoIO-generic-${bc}-rootfs-squashfs.bin
++#		define ATH_F_FILE	lininoIO-generic-${board}-rootfs-squashfs.bin
+ #		define ATH_F_LEN	$filesize
+ #		define ATH_F_ADDR	0x9f050000
+-#		define ATH_K_FILE	lininoIO-generic-${bc}-kernel.bin
++#		define ATH_K_FILE	lininoIO-generic-${board}-kernel.bin
+ #		define ATH_K_ADDR	0x9fEa0000
+-#		define MTDPARTS_DEFAULT	"mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env),14656k(rootfs),1280k(kernel),64k(nvram),64k(art),15936k@0x50000(firmware) "
+-#		define MTDPARTSENV_DEFAULT	"addparts=setenv bootargs ${bootargs} mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env),14656k(rootfs),1280k(kernel),64k(nvram),64k(art),15936k@0x50000(firmware)\0"
+-#		define TTYENV_DEFAULT	"addtty=setenv bootargs ${bootargs} console=ttyS0,115200\0"
+-#		define ROOTFS_DEFAULT	"rootfstype=squashfs,jffs2 noinitrd "
++#		define MTDPARTS_DEFAULT		"mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env),14656k(rootfs),1280k(kernel),64k(nvram),64k(art),15936k@0x50000(firmware)\0"
++#		define MTDPARTSENV_DEFAULT	"addparts=setenv bootargs ${bootargs} mtdparts=${mtdparts}\0"
++#		define ROOTFS_DEFAULT		"rootfstype=squashfs,jffs2 noinitrd "
+ #		define ROOTFSENV_DEFAULT	"addrootfs=setenv bootargs ${bootargs} rootfstype=squashfs,jffs2 noinitrd\0"
+-#		define BOARD_DEFAULT	"board=linino-chowchow "
+-#		define BOARDENV_DEFAULT	"addboard=setenv bootargs board=linino-chowchow\0"
+-#		define CONSOLE_DEFAULT	"console=ttyS0,115200 "
++#		define BOARDENV_DEFAULT		"addboard=setenv bootargs board=${board}\0"
++#		define TTYENV_DEFAULT		"addtty=setenv bootargs ${bootargs} console=${console}\0"
++#		define BOARD_DEFAULT		"board=linino-chowchow\0"
++#		define ERASE_ENV			"erase_env=erase 0x9f040000 +0x10000\0"
++#		if CONFIG_LININO_IO
++#			define CONSOLE_LININOIO_DEFAULT	"console=spicons\0"
++#		else
++#			define CONSOLE_DEFAULT		"console=ttyS0,115200\0"
++#		endif
++#		undef CONFIG_BAUDRATE
++#		define CONFIG_BAUDRATE	115200
+ #	else
+ #		define ATH_U_FILE	u-boot.bin
+ #		define ATH_F_FILE	${bc}-jffs2
+@@ -214,15 +207,18 @@
+ #endif
+ 
+ #define CONFIG_EXTRA_ENV_SETTINGS	\
+-	BC	\
++	BOARD_DEFAULT	\
+ 	BOARDENV_DEFAULT	\
++	CONSOLE_DEFAULT	\
+ 	TTYENV_DEFAULT	\
++	MTDPARTS_DEFAULT	\
+ 	MTDPARTSENV_DEFAULT	\
+ 	ROOTFSENV_DEFAULT	\
++	ERASE_ENV	\
+ 	"dir=\0" ATH_U_CMD ATH_F_CMD ATH_K_CMD ""
+ 
+ #ifdef CONFIG_LININO
+-#define	CONFIG_BOOTARGS		BOARD_DEFAULT CONSOLE_DEFAULT ROOTFS_DEFAULT MTDPARTS_DEFAULT
++#define	CONFIG_BOOTARGS
+ #else
+ #define	CONFIG_BOOTARGS		"console=ttyS0,115200 root=" ATH_ROOT_DEV " rootfstype=squashfs init=/sbin/init " MTDPARTS_DEFAULT
+ #endif
+diff --git a/include/configs/ar7240.h b/include/configs/ar7240.h
+index 7e5f641..63b1986 100644
+--- a/include/configs/ar7240.h
++++ b/include/configs/ar7240.h
+@@ -5,6 +5,21 @@
+ #ifndef __AR7240_H
+ #define __AR7240_H
+ 
++#define __gen_cmd(n, a, f, ec, cc, el)		\
++	#n "=tftp 0x80060000 ${dir}" #f "&&"	\
++	#ec " " #a " " #el "&&"			\
++	#cc " $fileaddr " #a " $filesize\0"
++
++#define gen_cmd(n, a, f)			\
++	__gen_cmd(n, a, f, erase, cp.b, +$filesize)
++
++#define gen_cmd_el(n, a, f, el)			\
++	__gen_cmd(n, a, f, erase, cp.b, +el)
++
++#define nand_gen_cmd(n, a, f, s)		\
++	__gen_cmd(n, a, f, nand erase, nand write, s)
++
++
+ #define CONFIG_MIPS32		1  /* MIPS32 CPU core	*/
+ 
+ #define CONFIG_BOOTDELAY	4	/* autoboot after 4 seconds	*/
+-- 
+2.10.1
+

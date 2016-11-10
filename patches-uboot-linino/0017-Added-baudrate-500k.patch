@@ -1,0 +1,25 @@
+From eb838c16d247a4c5e6162c29a3ccebe5f8b7d96e Mon Sep 17 00:00:00 2001
+From: m13 <mimmo@linino.org>
+Date: Wed, 18 Mar 2015 17:06:28 +0100
+Subject: [PATCH 17/24] Added baudrate 500k
+
+---
+ include/configs/ar7240.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/ar7240.h b/include/configs/ar7240.h
+index 63b1986..8004a5e 100644
+--- a/include/configs/ar7240.h
++++ b/include/configs/ar7240.h
+@@ -25,7 +25,7 @@
+ #define CONFIG_BOOTDELAY	4	/* autoboot after 4 seconds	*/
+ 
+ #define CONFIG_BAUDRATE		115200 
+-#define CFG_BAUDRATE_TABLE  { 	115200, 250000}
++#define CFG_BAUDRATE_TABLE  { 	115200, 250000, 500000}
+ 
+ #define	CONFIG_TIMESTAMP		/* Print image info with timestamp */
+ 
+-- 
+2.10.1
+

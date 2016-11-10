@@ -1,0 +1,24 @@
+From 306db9f27b543e47b2b835c82776e748fef92030 Mon Sep 17 00:00:00 2001
+From: m13 <mimmo@linino.org>
+Date: Wed, 29 Oct 2014 15:46:17 +0100
+Subject: [PATCH 05/24] chowchow: add F1E phy on the config
+
+---
+ Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Makefile b/Makefile
+index 3fda46f..cb9b81d 100644
+--- a/Makefile
++++ b/Makefile
+@@ -350,6 +350,7 @@ linino_chow_config		    : 	unconfig
+ 	@echo "#define CONFIG_WASP 1" >>include/config.h
+ 	@echo '#define CFG_AG7240_NMACS 1' >>include/config.h
+ 	@echo "#define FLASH_SIZE $(FLASH_SIZE)" >>include/config.h
++	@echo '#define CONFIG_F1E_PHY 1' >>include/config.h
+ ifdef BOARD_STRING
+ 	@echo "#define BOARD_STRING 1" >>include/config.h
+ endif
+-- 
+2.10.1
+

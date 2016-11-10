@@ -1,0 +1,22 @@
+From 9a581b3858e27a79cb46e8239e2a69efa8b297b2 Mon Sep 17 00:00:00 2001
+From: m13 <mimmo@linino.org>
+Date: Thu, 30 Oct 2014 12:13:14 +0100
+Subject: [PATCH 06/24] ap123: build with the proper phy settings
+
+---
+ board/ar7240/ap123/config.mk | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/board/ar7240/ap123/config.mk b/board/ar7240/ap123/config.mk
+index 38e0f11..7bf35b6 100755
+--- a/board/ar7240/ap123/config.mk
++++ b/board/ar7240/ap123/config.mk
+@@ -17,3 +17,5 @@ endif
+ # RAM version
+ # TEXT_BASE = 0x83fc0000
+ # TEXT_BASE = 0x80100000
++
++ETH_CONFIG=_f1e
+-- 
+2.10.1
+

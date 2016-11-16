@@ -1,0 +1,28 @@
+From 72c3e53097a9b813dee420698291d152aeb1cb47 Mon Sep 17 00:00:00 2001
+From: Shikha Singh <shikha.singh@st.com>
+Date: Mon, 1 Jun 2015 01:33:05 -0400
+Subject: [[linux-nfc] PATCH v1.0 1/5] :net :nfc Modification in
+ digital_core.c to support ISO14443
+ TypeA RF technology.
+
+Signed-off-by: Shikha Singh <shikha.singh@st.com>
+Signed-off-by: Sudeep Biswas <sudeep.biswas@st.com>
+---
+ net/nfc/digital_core.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/net/nfc/digital_core.c b/net/nfc/digital_core.c
+index 8970b76..246bed2 100644
+--- a/net/nfc/digital_core.c
++++ b/net/nfc/digital_core.c
+@@ -20,7 +20,7 @@
+ #include "digital.h"
+
+ #define DIGITAL_PROTO_NFCA_RF_TECH \
+-	(NFC_PROTO_JEWEL_MASK | NFC_PROTO_MIFARE_MASK | NFC_PROTO_NFC_DEP_MASK)
++	(NFC_PROTO_JEWEL_MASK | NFC_PROTO_MIFARE_MASK | NFC_PROTO_NFC_DEP_MASK | NFC_PROTO_ISO14443_MASK)
+
+ #define DIGITAL_PROTO_NFCB_RF_TECH	NFC_PROTO_ISO14443_B_MASK
+
+--
+1.7.5.4

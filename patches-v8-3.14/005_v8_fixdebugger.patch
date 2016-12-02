@@ -1,0 +1,88 @@
+From 31051e5c7b253b6a0006b536188fc0494bd6e082 Mon Sep 17 00:00:00 2001
+From: Julien Gilli <julien.gilli@joyent.com>
+Date: Thu, 8 Jan 2015 12:17:54 -0800
+Subject: [PATCH] deps: revert backport b593aa8 from v8 upstream
+
+This reverts commit 45f1330425b671905a02fe30ee7a1dd9544c2709.
+
+45f1330425b671905a02fe30ee7a1dd9544c2709 was basically breaking
+node-inspector. V8 landed a patch upstream that would probably fix these
+issues (see https://codereview.chromium.org/813873007), but without the
+ability to properly test it in the wild, it's safer to just revert the
+breaking change.
+
+Fixes #8948.
+
+Reviewed-By: Colin Ihrig <cjihrig@gmail.com>
+Reviewed-by: Trevor Norris <trev.norris@gmail.com>
+---
+ deps/v8/src/debug-debugger.js  | 5 ++---
+ deps/v8/src/mirror-debugger.js | 9 ++++-----
+ 2 files changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/deps/v8/src/debug-debugger.js b/deps/v8/src/debug-debugger.js
+index be39c49..a27961f 100644
+--- a/deps/v8/src/debug-debugger.js
++++ b/deps/v8/src/debug-debugger.js
+@@ -24,7 +24,6 @@
+ // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-"use strict";
+ 
+ // Default number of frames to include in the response to backtrace request.
+ var kDefaultBacktraceLength = 10;
+@@ -678,7 +677,7 @@ Debug.setBreakPoint = function(func, opt_line, opt_column, opt_condition) {
+ Debug.setBreakPointByScriptIdAndPosition = function(script_id, position,
+                                                     condition, enabled)
+ {
+-  var break_point = MakeBreakPoint(position);
++  break_point = MakeBreakPoint(position);
+   break_point.setCondition(condition);
+   if (!enabled) {
+     break_point.disable();
+@@ -743,7 +742,7 @@ Debug.clearBreakPoint = function(break_point_number) {
+ 
+ Debug.clearAllBreakPoints = function() {
+   for (var i = 0; i < break_points.length; i++) {
+-    var break_point = break_points[i];
++    break_point = break_points[i];
+     %ClearBreakPoint(break_point);
+   }
+   break_points = [];
+diff --git a/deps/v8/src/mirror-debugger.js b/deps/v8/src/mirror-debugger.js
+index 6bec59b..7f1a05a 100644
+--- a/deps/v8/src/mirror-debugger.js
++++ b/deps/v8/src/mirror-debugger.js
+@@ -24,7 +24,6 @@
+ // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-"use strict";
+ 
+ // Handle id counters.
+ var next_handle_ = 0;
+@@ -56,7 +55,7 @@ function MakeMirror(value, opt_transient) {
+ 
+   // Look for non transient mirrors in the mirror cache.
+   if (!opt_transient) {
+-    for (var id in mirror_cache_) {
++    for (id in mirror_cache_) {
+       mirror = mirror_cache_[id];
+       if (mirror.value() === value) {
+         return mirror;
+@@ -1155,11 +1154,11 @@ ErrorMirror.prototype.toText = function() {
+   // Use the same text representation as in messages.js.
+   var text;
+   try {
+-    text = %_CallFunction(this.value_, builtins.ErrorToString);
++    str = %_CallFunction(this.value_, builtins.ErrorToString);
+   } catch (e) {
+-    text = '#<Error>';
++    str = '#<Error>';
+   }
+-  return text;
++  return str;
+ };
+ 
+ 
